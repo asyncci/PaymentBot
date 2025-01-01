@@ -6,13 +6,18 @@ from telegram.ext import CommandHandler, ContextTypes, MessageHandler, filters
 async def invalid_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text("Нет такого варианта ответа.")
 
+def get_bookmakers() -> list[list[str]]:
+    return [['X1Bet','Melbet', '1Win', 'Funpari']]
+
+def get_wallets() -> list[list[str]]:
+    return [['Mbank','Kompanion']]
+
+
 class Withdraw(): 
     @staticmethod
     async def pick_bookmaker(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        reply = [
-            ['X1Bet','X1Bet','X1Bet','X1Bet','X1Bet'],
-            ['Отмена']
-        ]
+        reply = get_bookmakers()
+        reply.append(['Отмена'])
 
         markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
 
@@ -29,15 +34,36 @@ class Withdraw():
         else:
             await invalid_reply(update, context)
 
+class DepositWallet():
+    @staticmethod
+    async def pick_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        reply = get_wallets()
+        reply.append(['Отмена'])
+
+        markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
+
+        await update.message.reply_text('Выберите способ пополнения', reply_markup=markup)
+
+    @staticmethod
+    async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        user_response = update.message.text
+
+        if user_response == 'Отмена':
+            context.user_data['state'] = AgreedState
+            await AgreedState.welcome(update, context)
+        else:
+            if user_response not in get_wallets():
+                await invalid_reply(update, context)
+                return
+            context.user_data['bookmaker'] = user_response
+            context.user_data['state'] = DepositWallet
+            await DepositWallet.pick_wallet(update, context)
 
 class Deposit(): 
     @staticmethod
     async def pick_bookmaker(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        reply = [
-            ['ф','ы'],
-            ['ф','ы'],
-            ['Отмена']
-        ]
+        reply = get_bookmakers()
+        reply.append(['Отмена'])
 
         markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
 
@@ -52,7 +78,13 @@ class Deposit():
             context.user_data['state'] = AgreedState
             await AgreedState.welcome(update, context)
         else:
-            await invalid_reply(update, context)
+            if user_response not in get_bookmakers():
+                await invalid_reply(update, context)
+                return
+            context.user_data['bookmaker'] = user_response
+            context.user_data['state'] = DepositWallet
+            await DepositWallet.pick_wallet(update, context)
+            
 
 class AgreedState():
     @staticmethod   
