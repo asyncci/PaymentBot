@@ -3,6 +3,8 @@ from telegram.ext import Application, CommandHandler, MessageHandler
 
 from telegram.ext import CommandHandler, ContextTypes, MessageHandler, filters
 
+import admin
+
 async def invalid_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text("Нет такого варианта ответа.")
 
@@ -26,6 +28,11 @@ class Withdraw():
         if user_response == 'Отмена':
             context.user_data['state'] = AgreedState
             await AgreedState.welcome(update, context)
+
+        elif user_response == 'X1Bet':
+            await admin.callback(update, context)
+            await update.message.reply_text('Sent to admin');
+
         else:
             await invalid_reply(update, context)
 
@@ -130,6 +137,5 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await invalid_reply(update, context)
 
 def register_handlers(app: Application):     
-    app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_reply))
 
