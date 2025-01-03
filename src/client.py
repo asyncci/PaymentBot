@@ -3,22 +3,22 @@ from telegram.ext import Application, CommandHandler, MessageHandler
 
 from telegram.ext import CommandHandler, ContextTypes, MessageHandler, filters
 
-import admin
+import admin, bookmakers
 
 async def invalid_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text("Нет такого варианта ответа.")
 
-def get_bookmakers() -> list[list[str]]:
-    return [['X1Bet','Melbet', '1Win', 'Funpari']]
+async def get_bookmakers() -> list[list[str]]:
+    return [await bookmakers.bookmakerNames()]
 
-def get_wallets() -> list[list[str]]:
+async def get_wallets() -> list[list[str]]:
     return [['Mbank','Kompanion']]
 
 
 class Withdraw(): 
     @staticmethod
     async def pick_bookmaker(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        reply = get_bookmakers()
+        reply = await get_bookmakers()
         reply.append(['Отмена'])
 
         markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
@@ -31,8 +31,8 @@ class Withdraw():
         user_response = update.message.text
 
         if user_response == 'Отмена':
-            context.user_data['state'] = AgreedState
-            await AgreedState.welcome(update, context)
+            context.user_data['state'] = Idle
+            await Idle.welcome(update, context)
 
         elif user_response == 'X1Bet':
             await admin.callback(update, context)
@@ -44,7 +44,7 @@ class Withdraw():
 class DepositWallet():
     @staticmethod
     async def pick_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        reply = get_wallets()
+        reply = await get_wallets()
         reply.append(['Отмена'])
 
         markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
@@ -56,8 +56,8 @@ class DepositWallet():
         user_response = update.message.text
 
         if user_response == 'Отмена':
-            context.user_data['state'] = AgreedState
-            await AgreedState.welcome(update, context)
+            context.user_data['state'] = Idle
+            await Idle.welcome(update, context)
         else:
             if user_response not in get_wallets():
                 await invalid_reply(update, context)
@@ -69,7 +69,7 @@ class DepositWallet():
 class Deposit(): 
     @staticmethod
     async def pick_bookmaker(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        reply = get_bookmakers()
+        reply = await get_bookmakers()
         reply.append(['Отмена'])
 
         markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
@@ -82,8 +82,8 @@ class Deposit():
         user_response = update.message.text
 
         if user_response == 'Отмена':
-            context.user_data['state'] = AgreedState
-            await AgreedState.welcome(update, context)
+            context.user_data['state'] = Idle
+            await Idle.welcome(update, context)
         else:
             if user_response not in get_bookmakers():
                 await invalid_reply(update, context)
@@ -93,7 +93,7 @@ class Deposit():
             await DepositWallet.pick_wallet(update, context)
             
 
-class AgreedState():
+class Idle():
     @staticmethod   
     async def welcome(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         text = "Добро пожаловать в PayGo\n\n⚽️ Пополнение/Вывод: 0%\n⚡️ Моментальные пополнения\n"
@@ -141,10 +141,10 @@ class NotAgreed():
         user_response = update.message.text
         
         if user_response == 'Принять':
-            context.user_data['state'] = AgreedState 
+            context.user_data['state'] = Idle 
 
             await update.message.reply_text("Вы приняли соглашение!", reply_markup=ReplyKeyboardRemove())
-            await AgreedState.welcome(update, context)
+            await Idle.welcome(update, context)
         else:
             await invalid_reply(update, context)
 
