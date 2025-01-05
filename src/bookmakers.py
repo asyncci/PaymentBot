@@ -3,8 +3,18 @@ from telegram.ext import ContextTypes
 
 import admin, json
 
+def loadBookmakers():
+    try:
+        with open("bookmakers.json", "r") as final:
+            return json.load(final)
+    except FileNotFoundError:
+        print("File bookmakers.json not found.")
+        return []
+    except:
+        print("Errors with json file.")
+        return []
 
-bookmakers = []
+bookmakers = loadBookmakers()
 
 async def getBookmakers():
     return bookmakers
@@ -71,9 +81,14 @@ class EditBookmakerProcess():
                 await admin.invalid_reply(update, context)
                 return False
             case 3:
+                reply = [
+                        ['Отмена']
+                    ]
+                markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
+        
                 match user_response:
                     case '1':
-                        await update.message.reply_text('Введите новое название:')
+                        await update.message.reply_text('Введите новое название:', reply_markup=markup)
                         self.item = 1
                         self.step += 1
                         return False
@@ -139,7 +154,7 @@ class DeleteBookmakerProcess():
 class AddBookmakerProcess():
     
     def __init__(self) -> None:
-        self.step = 0
+        self.step = 1
 
     async def run(self, update: Update, context: ContextTypes.DEFAULT_TYPE, user_response: str | None) -> bool:
         reply = [
@@ -147,15 +162,20 @@ class AddBookmakerProcess():
             ]
         markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
         
-        self.step += 1
-        
         #get response on previous question and ask actual
         match self.step: 
             case 1:
                 await update.message.reply_text('Введите имя:', reply_markup=markup)
+        
+                self.step += 1
                 return False
             case 2: 
                 #get response for first question
+                if user_response in await bookmakerNames():
+                    await update.message.reply_text('Такой букмекер уже добавлен.\nВведите другое имя', reply_markup=markup)
+                    return False
+
+                self.step += 1
                 self.name = user_response
                 return True
        
@@ -170,17 +190,15 @@ class AddBookmakerProcess():
 
 class Bookmakers():
     @staticmethod
-    async def pickAction(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         reply = [
             ['Cписок букмекеров'],
-            ['Добавить букмекер', 'Удалить букмекер'],
-            ['Изменить букмекер'],
-            ['Сохранить в базу'],
-            ['Отмена']
+            ['Добавить', 'Удалить', 'Изменить'],
+            ['Сохранить в базу', 'Отмена'],
         ]
 
         markup = ReplyKeyboardMarkup(reply)
-        await update.message.reply_text('Меню настройки кошельков', reply_markup=markup)
+        await update.message.reply_text('Меню настройки букмекеров', reply_markup=markup)
 
     @staticmethod
     async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: 
@@ -188,41 +206,40 @@ class Bookmakers():
         user_response = update.message.text
 
         if user_response == 'Отмена':
-            context.user_data['local_state'] = None
-            state = admin.Idle
-            context.user_data['state'] = state
-            await admin.Idle.settings(update, context)
+            admin.adminInstance.local_state = None
+            admin.adminInstance.state = admin.Idle
+            await admin.adminInstance.finishedState(update, context)
 
         elif user_response == 'Cписок букмекеров':
-            text = 'Список кошельков: '
+            text = 'Список букмекеров: '
             j = 0
             for i in await getBookmakers():
                 j += 1
                 text += '\n' + str(j) + '.' + i['name']
 
             await update.message.reply_text(text)
-            await Bookmakers.pickAction(update, context)
+            await Bookmakers.start(update, context)
 
-        elif user_response == 'Добавить букмекер':
+        elif user_response == 'Добавить':
             local_state = AddBookmakerProcess()
-            context.user_data['local_state'] = local_state
+            admin.adminInstance.local_state = local_state
             await local_state.run(update, context, None)
               
-        elif user_response == 'Удалить букмекер':
+        elif user_response == 'Удалить':
             local_state = DeleteBookmakerProcess()
-            context.user_data['local_state'] = local_state
+            admin.adminInstance.local_state = local_state
             await local_state.run(update, context, None)
 
-        elif user_response == 'Изменить букмекер':
+        elif user_response == 'Изменить':
             local_state = EditBookmakerProcess()
-            context.user_data['local_state'] = local_state
+            admin.adminInstance.local_state = local_state
             await local_state.run(update, context, None)
 
         elif user_response == 'Сохранить в базу':
             await saveBookmakersDB()
             await update.message.reply_text('Сохранено в базу')
         else:
-            local_state = context.user_data['local_state']
+            local_state = admin.adminInstance.local_state
             if local_state == None:
                 await admin.invalid_reply(update, context)
                 return
@@ -230,6 +247,6 @@ class Bookmakers():
             finish = await local_state.run(update, context, user_response) 
             if finish:
                 await local_state.finalize(update, context)
-                context.user_data['local_state'] = None
-                await Bookmakers.pickAction(update, context)
+                admin.adminInstance.local_state = None
+                await admin.adminInstance.finishedState(update, context)
                 print(bookmakers)

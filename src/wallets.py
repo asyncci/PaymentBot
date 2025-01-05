@@ -3,8 +3,18 @@ from telegram.ext import ContextTypes
 
 import admin, json
 
+def loadWallets():
+    try:
+        with open("wallets.json", "r") as final:
+            return json.load(final)
+    except FileNotFoundError:
+        print("File wallets.json not found.")
+        return []
+    except:
+        print("Errors with json file.")
+        return []
 
-wallets = []
+wallets = loadWallets()
 
 async def getWallets():
     return wallets
@@ -21,7 +31,6 @@ async def editWallet(id, data):
 async def saveWalletsDB():
     with open("wallets.json", "w") as final:
 	    json.dump(wallets, final)
-
 
 async def walletNames() -> list[str]:
     wallets = await getWallets()
@@ -72,14 +81,19 @@ class EditWalletProcess():
                 await admin.invalid_reply(update, context)
                 return False
             case 3:
+                reply = [
+                    ['Отмена']
+                ]           
+                markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
+
                 match user_response:
                     case '1':
-                        await update.message.reply_text('Введите новое название:')
+                        await update.message.reply_text('Введите новое название:', reply_markup=markup)
                         self.item = 1
                         self.step += 1
                         return False
                     case '2':
-                        await update.message.reply_text('Введите новые реквизиты:')
+                        await update.message.reply_text('Введите новые реквизиты:', reply_markup=markup)
                         self.item = 2
                         self.step += 1
                         return False
@@ -147,23 +161,28 @@ class DeleteWalletProcess():
 class AddWalletProcess():
     
     def __init__(self) -> None:
-        self.step = 0
+        self.step = 1
 
     async def run(self, update: Update, context: ContextTypes.DEFAULT_TYPE, user_response: str | None) -> bool:
         reply = [
                 ['Отмена']
             ]
         markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
-        
-        self.step += 1
-        
+         
         #get response on previous question and ask actual
         match self.step: 
             case 1:
                 await update.message.reply_text('Введите имя:', reply_markup=markup)
+                self.step += 1
                 return False
             case 2: 
                 #get response for first question
+
+                if user_response in await walletNames():
+                    await update.message.reply_text('Такой кошелек уже добавлен.\nВведите другое имя', reply_markup=markup)
+                    return False
+
+                self.step += 1
                 self.name = user_response
 
                 await update.message.reply_text('Введите реквизиты:', reply_markup=markup)
@@ -184,13 +203,11 @@ class AddWalletProcess():
 
 class Wallets():
     @staticmethod
-    async def pickAction(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         reply = [
             ['Cписок кошельков'],
-            ['Добавить кошелек', 'Удалить кошелек'],
-            ['Изменить кошелек'],
-            ['Сохранить в базу'],
-            ['Отмена']
+            ['Добавить', 'Удалить', 'Изменить'],
+            ['Сохранить в базу', 'Отмена'],
         ]
 
         markup = ReplyKeyboardMarkup(reply)
@@ -202,10 +219,10 @@ class Wallets():
         user_response = update.message.text
 
         if user_response == 'Отмена':
-            context.user_data['local_state'] = None
-            state = admin.Idle
-            context.user_data['state'] = state
-            await admin.Idle.settings(update, context)
+            admin.adminInstance.local_state = None
+            
+            admin.adminInstance.state = admin.Idle
+            await admin.adminInstance.finishedState(update, context)
 
         elif user_response == 'Cписок кошельков':
             text = 'Список кошельков: '
@@ -215,28 +232,28 @@ class Wallets():
                 text += '\n' + str(j) + '.' + i['name']
 
             await update.message.reply_text(text)
-            await Wallets.pickAction(update, context)
+            await Wallets.start(update, context)
 
-        elif user_response == 'Добавить кошелек':
+        elif user_response == 'Добавить':
             local_state = AddWalletProcess()
-            context.user_data['local_state'] = local_state
+            admin.adminInstance.local_state = local_state
             await local_state.run(update, context, None)
               
-        elif user_response == 'Удалить кошелек':
+        elif user_response == 'Удалить':
             local_state = DeleteWalletProcess()
-            context.user_data['local_state'] = local_state
+            admin.adminInstance.local_state = local_state
             await local_state.run(update, context, None)
 
-        elif user_response == 'Изменить кошелек':
+        elif user_response == 'Изменить':
             local_state = EditWalletProcess()
-            context.user_data['local_state'] = local_state
+            admin.adminInstance.local_state = local_state
             await local_state.run(update, context, None)
         elif user_response == 'Сохранить в базу':
             await saveWalletsDB()
             await update.message.reply_text('Сохранено в базу')
 
         else:
-            local_state = context.user_data['local_state']
+            local_state = admin.adminInstance.local_state
             if local_state == None:
                 await admin.invalid_reply(update, context)
                 return
@@ -244,6 +261,6 @@ class Wallets():
             finish = await local_state.run(update, context, user_response) 
             if finish:
                 await local_state.finalize(update, context)
-                context.user_data['local_state'] = None
-                await Wallets.pickAction(update, context)
+                admin.adminInstance.local_state = None
+                await admin.adminInstance.finishedState(update, context)
                 print(wallets)
