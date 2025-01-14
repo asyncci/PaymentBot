@@ -2,6 +2,7 @@ from functools import update_wrapper
 from io import UnsupportedOperation
 from logging import error, exception
 from os import getenv
+import sys
 from dotenv import load_dotenv
 from telegram._utils.types import FileLike
 from telegram.ext import CallbackContext, CallbackQueryHandler, CommandHandler, ContextTypes, MessageHandler, filters
@@ -10,6 +11,10 @@ import logging
 import admin, client
 
 load_dotenv()
+
+orig_stdout = sys.stdout
+f = open('out.txt', 'w')
+sys.stdout = f
 
 try:
     TOKEN = getenv("BOT_TOKEN")
