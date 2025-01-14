@@ -194,11 +194,10 @@ class Idle():
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    print(vars(adminInstance))
-    print(update.message.chat)
     if(context.user_data == None):
         return; 
     state = Idle
+    adminInstance.username = update.message.chat.username
     adminInstance.state = state
     await state.start(update, context)
 
@@ -305,7 +304,7 @@ class WithdrawAccept():
         await context.bot.send_message(chat_id=self.chat.id, text=text)
 
     async def _decline_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        text = '⚠️ Вывод не выполнен\n⛔️ Вы ввели не верные данные для вывода\n🛟 Если у вас возникли какие то проблемы пишите админстратору: @igrokweb'
+        text = '⚠️ Вывод не выполнен\n⛔️ Вы ввели не верные данные для вывода\n🛟 Если у вас возникли какие то вопросы или проблемы пишите админстратору: @igrokweb'
         await context.bot.send_message(chat_id=self.chat.id, text=text)
 
     async def _block_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -398,7 +397,7 @@ class DepositAccept():
         await context.bot.send_message(chat_id=self.chat.id, text=text)
 
     async def _decline_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        text = 'Депозит не выполнен\n⛔️ Уведомляем за использование поддельного или фальшивого чека, вы подвергаете себя риску поддельных операция ! Пожалуйста соблюдайте правила и будьте внимательны чтобы избежать блокировки'
+        text = 'Депозит не выполнен\n⛔️ Уведомляем за использование поддельного или фальшивого чека, вы подвергаете себя риску поддельных операция ! Пожалуйста соблюдайте правила и будьте внимательны чтобы избежать блокировки. Если у вас возникли какие то проблемы пишите админстратору: @igrokweb'
         await context.bot.send_message(chat_id=self.chat.id, text=text)
 
     async def _block_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -417,6 +416,8 @@ class Admin:
 
     requests: List[DepositAccept|WithdrawAccept] = []
     countReqsDone: int = 0
+    
+    username: str = ''
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
