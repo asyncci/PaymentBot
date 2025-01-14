@@ -1,17 +1,18 @@
 import asyncio
 from collections.abc import Awaitable, Callable, Coroutine
+from functools import update_wrapper
 from io import UnsupportedOperation
 import json
 from logging import captureWarnings, error, exception
 from os import execle, getenv, replace
 from typing import Any, List, Optional
 from dotenv import load_dotenv
-from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from client import DepositProcess, WithdrawProcess
 from wallets import Wallets
 from bookmakers import Bookmakers
 
-from telegram.ext import ContextTypes
+from telegram.ext import CallbackContext, ContextTypes
 
 import inspect
 
@@ -30,35 +31,18 @@ async def invalid_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     await update.message.reply_text("Нет такого варианта ответа -.")
 
 async def callbackWithdraw(update: Update, context: ContextTypes.DEFAULT_TYPE, newWithdraw: WithdrawProcess) -> None:
-    if adminInstance.last_state == None:
-        state = WithdrawAccept(newWithdraw, adminInstance.state, update, context)
-        adminInstance.last_state = state
-        if adminInstance.local_state != None:
-            adminInstance.next_state = state
-            print(vars(adminInstance))
-        else:
-            adminInstance.state = state
-            await adminInstance.state.start(update, context)
-    else:
-        state = WithdrawAccept(newWithdraw, adminInstance.last_state.previous_state, update, context)
-        adminInstance.last_state.next_request_state = state
-        adminInstance.last_state = state
+    id = len(adminInstance.requests)
+    state = WithdrawAccept(id, newWithdraw, adminInstance.state, update, context)
+    adminInstance.requests.append(state)
+    if adminInstance.local_state == None:
+        await adminInstance.runRequests(update, context)
 
 async def callbackDeposit(update: Update, context: ContextTypes.DEFAULT_TYPE, newDeposit: DepositProcess) -> None:
-    if adminInstance.last_state == None:
-        state = DepositAccept(newDeposit, adminInstance.state, update, context)
-        adminInstance.last_state = state
-        if adminInstance.local_state != None:
-            adminInstance.next_state = state
-            print(vars(adminInstance))
-        else:
-            adminInstance.state = state
-            await adminInstance.state.start(update, context)
-    else:
-        state = DepositAccept(newDeposit, adminInstance.last_state.previous_state, update, context)
-        adminInstance.last_state.next_request_state = state
-        adminInstance.last_state = state
-
+    id = len(adminInstance.requests)
+    state = DepositAccept(id, newDeposit, adminInstance.state, update, context)
+    adminInstance.requests.append(state)
+    if adminInstance.local_state == None:
+        await adminInstance.runRequests(update, context)
 
 def loadBlockedUsers():
     try:
@@ -229,9 +213,16 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         print(e)
         await invalid_reply(update, context)
 
+async def button_handler(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+    await query.answer()
+    callback_data = json.loads(query.data)
+    await adminInstance.acceptRequests(callback_data['id'], callback_data['option'], update, context)
+    
+
 
 class WithdrawAccept(): 
-    def __init__(self, newWithdraw: WithdrawProcess, previous_state: Optional[Any], update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    def __init__(self, id , newWithdraw: WithdrawProcess, previous_state: Optional[Any], update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         self.withdraw = newWithdraw
         self.previous_state = previous_state 
         username = update.message.chat.username
@@ -242,6 +233,8 @@ class WithdrawAccept():
 
         self.chat = update.message.chat
         self.next_request_state = None
+        self.id = id
+        self.done = False
 
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -249,11 +242,15 @@ class WithdrawAccept():
         withdraw = self.withdraw
         
         reply = [
-            [username],
-            ['Принять','Отклонить','Заблокировать']
+             [
+                  InlineKeyboardButton('Принять', callback_data=json.dumps({'id': str(self.id), 'option': 'accept'})), 
+                  InlineKeyboardButton('Отклонить', callback_data=json.dumps({'id': str(self.id), 'option': 'decline'}))
+            ],
+            [     InlineKeyboardButton('Заблокировать', callback_data=json.dumps({'id': str(self.id), 'option': 'block'})) 
+            ]
         ]
 
-        markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
+        markup = InlineKeyboardMarkup(reply)
         
         text = "ВЫВОД от пользователя: {}\n\nБукмекер: {}\nПополнение по: {}\nId на сайте: {}\nСумма: {}\nКОД: {}".format(username, withdraw.bookmaker, withdraw.wallet['name'], withdraw.id, withdraw.money, withdraw.code)
          
@@ -262,27 +259,31 @@ class WithdrawAccept():
         #await context.bot.send_message(chat_id=ADMIN_ID, reply_markup=markup, text=text)
 
     async def finish(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        if self.next_request_state != None:
-            adminInstance.state = self.next_request_state
-            await adminInstance.state.start(update, context)
-            return
+        self.done = True
+        #if self.next_request_state != None:
+        #    adminInstance.state = self.next_request_state
+        #    await adminInstance.state.start(update, context)
+        #    return
+        #
+        #adminInstance.state = self.previous_state
+        #adminInstance.last_state = None
+        #await adminInstance.state.start(update, context)
 
-        adminInstance.state = self.previous_state
-        adminInstance.last_state = None
-        await adminInstance.state.start(update, context)
-
-    async def handle_reply(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: 
-        user_response = update.message.text
+    async def button_handler(self, user_response: str, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: 
+    
+        query = update.callback_query
+        print("adalkwod: ", query.message)
+        message = query.message.text
         
-        if user_response == 'Принять':
+        if user_response == 'accept':
             await self._accept_message(update, context)
-            await context.bot.send_message(reply_to_message_id=self.message_id, text='Принято', chat_id=ADMIN_ID)
+            await query.edit_message_text(text=message + "\n\nПринято")
             await self.finish(update, context)
-        elif user_response == 'Отклонить':
+        elif user_response == 'decline':
             await self._decline_message(update, context)
-            await context.bot.send_message(reply_to_message_id=self.message_id, text='Отклонено', chat_id=ADMIN_ID)
+            await query.edit_message_text(text=message + "\n\nОтклонено")
             await self.finish(update, context)
-        elif user_response == 'Заблокировать':
+        elif user_response == 'block':
             user = {
                 'name': self.chat.first_name,
                 'username': self.chat.username,
@@ -291,7 +292,7 @@ class WithdrawAccept():
             try:
                 await addBlockedUser(user)
                 await saveBlockedUsersDB()
-                await context.bot.send_message(reply_to_message_id=self.message_id, text='Заблокировано', chat_id=ADMIN_ID)
+                await query.edit_message_text(text=message + "\n\nЗаблокировано")
                 await self._block_message(update, context)
                 await self.finish(update, context)
             except:
@@ -313,7 +314,7 @@ class WithdrawAccept():
 
 
 class DepositAccept(): 
-    def __init__(self, newDeposit: DepositProcess, previous_state: Optional[Any], update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    def __init__(self, id, newDeposit: DepositProcess, previous_state: Optional[Any], update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         self.deposit = newDeposit
         self.previous_state = previous_state 
         username = update.message.chat.username
@@ -324,6 +325,8 @@ class DepositAccept():
 
         self.chat = update.message.chat
         self.next_request_state = None
+        self.id = id
+        self.done = False
 
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -331,11 +334,15 @@ class DepositAccept():
         deposit = self.deposit
         
         reply = [
-            [username],
-            ['Принять','Отклонить','Заблокировать']
+             [
+                  InlineKeyboardButton('Принять', callback_data=json.dumps({'id': str(self.id), 'option': 'accept'})), 
+                  InlineKeyboardButton('Отклонить', callback_data=json.dumps({'id': str(self.id), 'option': 'decline'}))
+            ],
+            [     InlineKeyboardButton('Заблокировать', callback_data=json.dumps({'id': str(self.id), 'option': 'block'})) 
+            ]
         ]
 
-        markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
+        markup = InlineKeyboardMarkup(reply)
         
         names = " ".join(self.deposit.details)
         text = "ПОПОЛНЕНИЕ от пользователя: {}\n\nБукмекер: {}\nПополнение по: {}\nФИО: {}\nId на сайте: {}\nСумма: {}".format(username, deposit.bookmaker, deposit.wallet['name'], names, deposit.id, deposit.money)
@@ -346,27 +353,30 @@ class DepositAccept():
         #await context.bot.send_message(chat_id=ADMIN_ID, reply_markup=markup, text=text)
 
     async def finish(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        if self.next_request_state != None:
-            adminInstance.state = self.next_request_state
-            await adminInstance.state.start(update, context)
-            return
+        self.done = True    
+        #if self.next_request_state != None:
+        #    adminInstance.state = self.next_request_state
+        #    await adminInstance.state.start(update, context)
+        #    return
+        #
+        #adminInstance.state = self.previous_state
+        #adminInstance.last_state = None
+        #await adminInstance.state.start(update, context)
 
-        adminInstance.state = self.previous_state
-        adminInstance.last_state = None
-        await adminInstance.state.start(update, context)
-
-    async def handle_reply(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: 
-        user_response = update.message.text
+    async def button_handler(self, user_response: str, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: 
         
-        if user_response == 'Принять':
+        query = update.callback_query
+        message = query.message.caption
+
+        if user_response == 'accept':
             await self._accept_message(update, context)
-            await context.bot.send_message(reply_to_message_id=self.message_id, text='Принято', chat_id=ADMIN_ID)
+            await query.edit_message_caption(caption=message + '\n\nПринято')
             await self.finish(update, context)
-        elif user_response == 'Отклонить':
+        elif user_response == 'decline':
             await self._decline_message(update, context)
-            await context.bot.send_message(reply_to_message_id=self.message_id, text='Отклонено', chat_id=ADMIN_ID)
+            await query.edit_message_caption(caption=message + '\n\nОтклонено')
             await self.finish(update, context)
-        elif user_response == 'Заблокировать':
+        elif user_response == 'block':
             user = {
                 'name': self.chat.first_name,
                 'username': self.chat.username,
@@ -375,7 +385,7 @@ class DepositAccept():
             try:
                 await addBlockedUser(user)
                 await saveBlockedUsersDB()
-                await context.bot.send_message(reply_to_message_id=self.message_id, text='Заблокировано', chat_id=ADMIN_ID)
+                await query.edit_message_caption(caption=message + '\n\nЗаблокировано')
                 await self._block_message(update, context)
                 await self.finish(update, context)
             except:
@@ -405,16 +415,29 @@ class Admin:
     last_state: Optional[Any] = None
     _instance = None  # Class variable to store the instance
 
+    requests: List[DepositAccept|WithdrawAccept] = []
+    countReqsDone: int = 0
+
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
             cls._instance = super().__new__(cls)
         return cls._instance
 
     async def finishedState(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if self.next_state != None:
-            self.state = self.next_state
-            self.next_state = None
-        print("goekgoe")
+        await self.runRequests(update, context)
         await self.state.start(update, context)
+
+    async def runRequests(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        for request in self.requests:
+            if request.done == False:
+                await request.start(update, context)
+
+    async def acceptRequests(self, id, user_response: str, update: Update, context: CallbackContext) -> None:
+        id = int(id)
+        await self.requests[id].button_handler(user_response, update, context)
+        self.countReqsDone += 1
+        if self.countReqsDone == len(self.requests):
+            self.countReqsDone = 0
+            self.requests.clear()
 
 adminInstance = Admin()

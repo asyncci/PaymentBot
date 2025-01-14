@@ -1,11 +1,12 @@
+from functools import update_wrapper
 from io import UnsupportedOperation
 from logging import error, exception
 from os import getenv
 from dotenv import load_dotenv
 from telegram._utils.types import FileLike
-from telegram.ext import CommandHandler, ContextTypes, MessageHandler, filters
+from telegram.ext import CallbackContext, CallbackQueryHandler, CommandHandler, ContextTypes, MessageHandler, filters
 from telegram import Update
-
+import logging
 import admin, client
 
 load_dotenv()
@@ -50,7 +51,13 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         
         await client.handle_reply(update, context)
 
+async def button_handler(update: Update, context: CallbackContext) -> None:
+    await admin.button_handler(update, context)
+
+#logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    #level=logging.DEBUG)
+
 app.add_handler(CommandHandler('start', start));
 app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, handle_reply))
-
+app.add_handler(CallbackQueryHandler(button_handler))
 app.run_polling()

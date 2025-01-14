@@ -118,6 +118,7 @@ class EditWalletProcess():
     async def finalize(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: 
         wallet = (await getWallets())[self.walletId]
         await update.message.reply_text('Кошелек был изменен!\nНазвание: {}\nРеквизиты: {}\n'.format(wallet['name'], wallet['details']))
+        await saveWalletsDB()
 
 class DeleteWalletProcess():
     
@@ -157,6 +158,7 @@ class DeleteWalletProcess():
     async def finalize(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: 
         await update.message.reply_text('Кошелек был удален!')
 
+        await saveWalletsDB()
 
 class AddWalletProcess():
     
@@ -200,6 +202,7 @@ class AddWalletProcess():
         )
         await update.message.reply_text('Кошелек был добавлен!')
     
+        await saveWalletsDB()
 
 class Wallets():
     @staticmethod
@@ -207,7 +210,7 @@ class Wallets():
         reply = [
             ['Cписок кошельков'],
             ['Добавить', 'Удалить', 'Изменить'],
-            ['Сохранить в базу', 'Отмена'],
+            ['Отмена'],
         ]
 
         markup = ReplyKeyboardMarkup(reply)

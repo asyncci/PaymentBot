@@ -1,3 +1,4 @@
+from functools import update_wrapper
 from io import UnsupportedOperation
 import json
 import re
@@ -9,6 +10,21 @@ from telegram.ext import CommandHandler, ContextTypes, MessageHandler, filters
 
 import admin, bookmakers, wallets
 import inspect
+
+
+def escape_special_characters(text: str, special_characters: str) -> str:
+    """
+    Escapes special characters in the given text by adding a backslash before each.
+    
+    :param text: The input string to escape.
+    :param special_characters: A string containing all characters to escape.
+    :return: The escaped string.
+    """
+    # Create a regex pattern from the special characters
+    pattern = f"([{re.escape(special_characters)}])"
+    # Add a backslash before each special character
+    escaped_text = re.sub(pattern, r"\\\1", text)
+    return escaped_text
 
 async def invalid_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
@@ -149,7 +165,7 @@ class WithdrawProcess():
                 ]
                 markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
                 
-                text='Как получить код:\n\n1. Заходим на сайт букмекера\n2. Вывести со счета\n3. Выбираем наличные\n4. Пишем сумму\n5. Город: Бишкек\n6. Улица: PayGo.KG\n\nДальше делаем все по инструкции после получения кода введите его здесь'
+                text='Как получить код:\n\n1. Заходим на сайт букмекера\n2. Вывести со счета\n3. Выбираем наличные\n4. Пишем сумму\n5. Город: Бишкек\n6. Улица: GYM Kassa.KG\n\nДальше делаем все по инструкции после получения кода введите его здесь'
                 await update.message.reply_photo(photo=open('photos/instruction.jpg','rb'),caption=text, reply_markup=markup)
 
                 
@@ -311,7 +327,11 @@ class DepositProcess():
                 await update.message.reply_text(warning_text)
 
                 reciever_details = 'Способ оплаты: {}\n\nРеквизиты: `{}`\nСумма: `{}`\n\nСумма и реквизит копируются при касании' 
-                await update.message.reply_text(reciever_details.format(self.wallet['name'], self.wallet['details'], money), parse_mode='MarkdownV2')
+
+                special_chars = r"_*[]()~`>#+-=|{}.!\\"
+                name = escape_special_characters(self.wallet['name'], special_chars)
+
+                await update.message.reply_text(reciever_details.format(name, self.wallet['details'], money), parse_mode='MarkdownV2')
 
                 reply = [
                     ['Отмена']
@@ -367,7 +387,7 @@ class Deposit():
 class IdleClient():
     @staticmethod   
     async def welcome(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        text = "Добро пожаловать в PayGo\n\n⚽️ Пополнение/Вывод: 0%\n⚡️ Моментальные пополнения\n"
+        text = "Добро пожаловать в GYM Kassa⚽️\n\n⚡️ Моментальные пополнения\n"
     
         reply = [
             ['Пополнить', 'Вывести']

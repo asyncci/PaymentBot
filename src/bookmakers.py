@@ -111,6 +111,7 @@ class EditBookmakerProcess():
     async def finalize(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: 
         wallet = (await getBookmakers())[self.walletId]
         await update.message.reply_text('Букмекер был изменен!\nНазвание: {}\n'.format(wallet['name']))
+        await saveBookmakersDB()
 
 class DeleteBookmakerProcess():
     
@@ -149,6 +150,7 @@ class DeleteBookmakerProcess():
                
     async def finalize(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: 
         await update.message.reply_text('Букмекер был удален!')
+        await saveBookmakersDB()
 
 
 class AddBookmakerProcess():
@@ -186,7 +188,7 @@ class AddBookmakerProcess():
             }
         )
         await update.message.reply_text('Букмекер был добавлен!')
-    
+        await saveBookmakersDB()
 
 class Bookmakers():
     @staticmethod
@@ -194,7 +196,7 @@ class Bookmakers():
         reply = [
             ['Cписок букмекеров'],
             ['Добавить', 'Удалить', 'Изменить'],
-            ['Сохранить в базу', 'Отмена'],
+            ['Отмена'],
         ]
 
         markup = ReplyKeyboardMarkup(reply)
