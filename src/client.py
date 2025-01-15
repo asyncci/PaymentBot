@@ -484,7 +484,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     else:
         state = IdleClient
 
-    print(update.message.chat)
     context.user_data['state'] = state
     await state.welcome(update, context)
 
