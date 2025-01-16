@@ -177,7 +177,7 @@ class WithdrawProcess():
                 return True
 
     async def finalize(self, update: Update, context: ContextTypes.DEFAULT_TYPE, user_response: str | None) -> None:
-        await update.message.reply_text('⏳ Заявка на вывод успешно создана, время выплаты от 1 минуты до 3 часов, пожалуйста дождитесь\n\nID аккаунта: {}\nНаписать администратору: ' + '@' + admin.adminInstance.username.format(self.id))
+        await update.message.reply_text('⏳ Заявка на вывод успешно создана, время выплаты от 1 минуты до 3 часов, пожалуйста дождитесь\n\nID аккаунта: {}\nНаписать администратору: '.format(self.id) + '@' + admin.adminInstance.username.format(self.id))
         await admin.callbackWithdraw(update, context, self)
 
 class Withdraw(): 

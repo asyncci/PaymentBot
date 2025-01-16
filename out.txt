@@ -1,1 +1,0 @@
-Chat(first_name='ㅤ', id=7507655482, type=<ChatType.PRIVATE>, username='sulkodwo')

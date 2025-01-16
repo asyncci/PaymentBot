@@ -300,7 +300,7 @@ class WithdrawAccept():
             await invalid_reply(update, context)
 
     async def _accept_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        text = 'Ваша заявка была принята!🎆\nОжидайте Вывод⬇️'
+        text = '✅ Вывод выполнен\n💸 Выведено: {} KGS\n🆔 Счет: {}'.format(self.withdraw.money, self.withdraw.id)
         await context.bot.send_message(chat_id=self.chat.id, text=text)
 
     async def _decline_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -393,7 +393,7 @@ class DepositAccept():
             await invalid_reply(update, context)
 
     async def _accept_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        text = 'Ваша заявка была принята!🎆\nОжидайте пополнения '
+        text = '✅ Депозит выполнен\n💸 Ваш счет пополнен: {} KGS\n🆔 Счет: {}'.format(self.deposit.money, self.deposit.id)
         await context.bot.send_message(chat_id=self.chat.id, text=text)
 
     async def _decline_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
