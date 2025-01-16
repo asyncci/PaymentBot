@@ -265,7 +265,7 @@ class WithdrawAccept():
 
         markup = InlineKeyboardMarkup(reply)
         
-        text = "ВЫВОД от пользователя: {}\n\nБукмекер: {}\nId на сайте: `{}`\nВывод по: {}\nНомер: `{}`\nСумма: `{}`\nКОД: {}".format(username, withdraw.bookmaker['name'], withdraw.id, withdraw.wallet['name'], withdraw.phone, withdraw.money, withdraw.code)
+        text = "ВЫВОД от пользователя: {}\n\nБукмекер: {}\nId на сайте: `{}`\nВывод по: {}\nНомер: `{}`\nСумма: `{}`\nКОД: `{}`".format(username, withdraw.bookmaker['name'], withdraw.id, withdraw.wallet['name'], withdraw.phone, withdraw.money, withdraw.code)
         
         special_chars = r"_*[]()~>#+-=|{}.!\\"
         text = escape_special_characters(text, special_chars)
