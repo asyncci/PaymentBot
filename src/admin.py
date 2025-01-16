@@ -210,7 +210,7 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await state.handle_reply(update, context)
     except Exception as e:
         print(e)
-        await invalid_reply(update, context)
+        await start(update, context)
 
 async def button_handler(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
@@ -407,7 +407,7 @@ class DepositAccept():
 
 
 class Admin:
-    state: Optional[Any] = Idle
+    state: Optional[Any] = None
     local_state: Optional[Any] = None
     #callback_states: List[DepositAccept | DepositAccept]
     next_state: Optional[Any] = None

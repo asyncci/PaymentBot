@@ -496,6 +496,6 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await state.handle_reply(update, context)
     except Exception as e:
         print(e)
-        await invalid_reply(update, context)
+        await start(update, context)
 
 
