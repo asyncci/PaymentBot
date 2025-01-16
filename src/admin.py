@@ -8,12 +8,13 @@ from os import execle, getenv, replace
 from typing import Any, List, Optional
 from dotenv import load_dotenv
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
+from telegram._utils.argumentparsing import parse_lpo_and_dwpp
 from client import DepositProcess, WithdrawProcess
 from wallets import Wallets
 from bookmakers import Bookmakers
 
 from telegram.ext import CallbackContext, ContextTypes
-
+import re
 import inspect
 
 
@@ -24,6 +25,19 @@ except:
     error('Admin ID not provided in .env.')
     quit()
 
+def escape_special_characters(text: str, special_characters: str) -> str:
+    """
+    Escapes special characters in the given text by adding a backslash before each.
+    
+    :param text: The input string to escape.
+    :param special_characters: A string containing all characters to escape.
+    :return: The escaped string.
+    """
+    # Create a regex pattern from the special characters
+    pattern = f"([{re.escape(special_characters)}])"
+    # Add a backslash before each special character
+    escaped_text = re.sub(pattern, r"\\\1", text)
+    return escaped_text
 
 async def invalid_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     stack = inspect.stack()
@@ -251,9 +265,12 @@ class WithdrawAccept():
 
         markup = InlineKeyboardMarkup(reply)
         
-        text = "ВЫВОД от пользователя: {}\n\nБукмекер: {}\nПополнение по: {}\nId на сайте: {}\nСумма: {}\nНомер: {}\nКОД: {}".format(username, withdraw.bookmaker['name'], withdraw.wallet['name'], withdraw.id, withdraw.money, withdraw.phone, withdraw.code)
-         
-        message = await context.bot.send_message(chat_id=ADMIN_ID, reply_markup=markup, text=text)
+        text = "ВЫВОД от пользователя: {}\n\nБукмекер: {}\nId на сайте: `{}`\nВывод по: {}\nНомер: `{}`\nСумма: `{}`\nКОД: {}".format(username, withdraw.bookmaker['name'], withdraw.id, withdraw.wallet['name'], withdraw.phone, withdraw.money, withdraw.code)
+        
+        special_chars = r"_*[]()~>#+-=|{}.!\\"
+        text = escape_special_characters(text, special_chars)
+
+        message = await context.bot.send_message(chat_id=ADMIN_ID, reply_markup=markup, text=text, parse_mode='MarkdownV2')
         self.message_id = message.message_id
         #await context.bot.send_message(chat_id=ADMIN_ID, reply_markup=markup, text=text)
 
@@ -344,10 +361,13 @@ class DepositAccept():
         markup = InlineKeyboardMarkup(reply)
         
         names = " ".join(self.deposit.details)
-        text = "ПОПОЛНЕНИЕ от пользователя: {}\n\nБукмекер: {}\nПополнение по: {}\nФИО: {}\nId на сайте: {}\nСумма: {}".format(username, deposit.bookmaker, deposit.wallet['name'], names, deposit.id, deposit.money)
+        text = "ПОПОЛНЕНИЕ от пользователя: {}\n\nБукмекер: {}\nПополнение по: {}\nФИО: {}\nId на сайте: `{}`\nСумма: `{}`".format(username, deposit.bookmaker, deposit.wallet['name'], names, deposit.id, deposit.money)
         photo = deposit.photo
          
-        message = await context.bot.send_photo(chat_id=ADMIN_ID, reply_markup=markup, caption=text, photo=photo[0])
+        special_chars = r"_*[]()~>#+-=|{}.!\\"
+        text = escape_special_characters(text, special_chars)
+        
+        message = await context.bot.send_photo(chat_id=ADMIN_ID, reply_markup=markup, caption=text, photo=photo[0], parse_mode='MarkdownV2')
         self.message_id = message.message_id
         #await context.bot.send_message(chat_id=ADMIN_ID, reply_markup=markup, text=text)
 
