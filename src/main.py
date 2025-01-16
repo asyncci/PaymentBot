@@ -1,10 +1,6 @@
-from functools import update_wrapper
-from io import UnsupportedOperation
-from logging import error, exception
+from logging import error 
 from os import getenv
-import sys
 from dotenv import load_dotenv
-from telegram._utils.types import FileLike
 from telegram.ext import CallbackContext, CallbackQueryHandler, CommandHandler, ContextTypes, MessageHandler, filters
 from telegram import Update
 import logging

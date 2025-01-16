@@ -1,3 +1,4 @@
+from logging import exception
 from telegram import ReplyKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
@@ -18,6 +19,12 @@ bookmakers = loadBookmakers()
 
 async def getBookmakers():
     return bookmakers
+
+async def getBookmakerByName(name: str) -> dict|None:
+    for i in bookmakers:
+        if i['name'] == name:
+            return i
+    return None
 
 async def addBookmaker(wallet):
     bookmakers.append(wallet)
@@ -65,14 +72,14 @@ class EditBookmakerProcess():
 
                     if user_response == i:
                         reply = [
-                            ['1'],
+                            ['1','2'],
                             ['Отмена']
                         ]           
                         markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
 
                         self.walletId = index
 
-                        await update.message.reply_text('Выберите что изменить:\n1.Название\n\n', reply_markup=markup)
+                        await update.message.reply_text('Выберите что изменить:\n1.Название\n2.Город\n\n', reply_markup=markup)
                         self.step += 1
                         return False
 
@@ -92,6 +99,10 @@ class EditBookmakerProcess():
                         self.item = 1
                         self.step += 1
                         return False
+                    case '2':
+                        await update.message.reply_text('Введите новый город:', reply_markup=markup)
+                        self.item = 2
+                        self.step += 1
                     case _:
                         await admin.invalid_reply(update, context)
                         return False
@@ -101,6 +112,8 @@ class EditBookmakerProcess():
                 match self.item:
                     case 1: 
                         wallet['name'] = user_response
+                    case 2:
+                        wallet['city'] = user_response
                     case _:
                         exception('Incorrect item changing.')
 
@@ -179,12 +192,19 @@ class AddBookmakerProcess():
 
                 self.step += 1
                 self.name = user_response
+
+                await update.message.reply_text('Введите город:', reply_markup=markup)
+                return False
+            case 3: 
+                self.city = user_response
+                self.step += 1
                 return True
        
     async def finalize(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: 
         await addBookmaker(
             { 
-                "name": self.name
+                "name": self.name,
+                "city": self.city,
             }
         )
         await update.message.reply_text('Букмекер был добавлен!')
@@ -217,7 +237,7 @@ class Bookmakers():
             j = 0
             for i in await getBookmakers():
                 j += 1
-                text += '\n' + str(j) + '.' + i['name']
+                text += '\n' + str(j) + '.' + i['name'] + " - " + i['city']
 
             await update.message.reply_text(text)
             await Bookmakers.start(update, context)

@@ -251,7 +251,7 @@ class WithdrawAccept():
 
         markup = InlineKeyboardMarkup(reply)
         
-        text = "ВЫВОД от пользователя: {}\n\nБукмекер: {}\nПополнение по: {}\nId на сайте: {}\nСумма: {}\nКОД: {}".format(username, withdraw.bookmaker, withdraw.wallet['name'], withdraw.id, withdraw.money, withdraw.code)
+        text = "ВЫВОД от пользователя: {}\n\nБукмекер: {}\nПополнение по: {}\nId на сайте: {}\nСумма: {}\nНомер: {}\nКОД: {}".format(username, withdraw.bookmaker['name'], withdraw.wallet['name'], withdraw.id, withdraw.money, withdraw.phone, withdraw.code)
          
         message = await context.bot.send_message(chat_id=ADMIN_ID, reply_markup=markup, text=text)
         self.message_id = message.message_id

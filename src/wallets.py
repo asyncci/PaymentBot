@@ -232,7 +232,7 @@ class Wallets():
             j = 0
             for i in await getWallets():
                 j += 1
-                text += '\n' + str(j) + '.' + i['name']
+                text += '\n' + str(j) + '.' + i['name'] + " - " + i['details']
 
             await update.message.reply_text(text)
             await Wallets.start(update, context)

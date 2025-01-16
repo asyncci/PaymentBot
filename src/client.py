@@ -40,7 +40,7 @@ async def get_bookmakers() -> list[list[str]]:
     
     i = 0
     while i < len(bookmakerNames):
-        batch.append(bookmakerNames[i:i+1])
+        batch.append(bookmakerNames[i:i+2])
         i += 2
 
     return batch
@@ -76,13 +76,15 @@ class WithdrawProcess():
                 await update.message.reply_text('Выберите букмекер 👇', reply_markup=markup)
                 return False
             case 2:
-                if user_response not in await bookmakers.bookmakerNames() :
-                    print("geoko")
+                bookmaker = await bookmakers.getBookmakerByName(user_response)
+
+                if bookmaker == None:
                     await invalid_reply(update, context)
                     return False
 
+                self.bookmaker = bookmaker
+
                 self.step += 1
-                self.bookmaker = user_response
 
                 reply = await get_wallets()
                 reply.append(['Отмена'])
@@ -113,17 +115,10 @@ class WithdrawProcess():
                 await update.message.reply_text(text=text.format(self.wallet['name']), reply_markup=markup)
                 return False
             case 4:
-                #check for correct name
-                pattern = r"^\+?\d{1,3}?[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$"
-                isPhoneNumber = bool(re.fullmatch(pattern, user_response))
-                if isPhoneNumber == False:
-                    await update.message.reply_text('Введите корректный номер телефона!')
-                    return False
-
                 self.step += 1
                 self.phone = user_response
                 text = "Введите ID вашего счета {}"
-                await update.message.reply_photo(photo=open('photos/xbet.jpg','rb'), caption=text.format(self.bookmaker)) 
+                await update.message.reply_photo(photo=open('photos/xbet.jpg','rb'), caption=text.format(self.bookmaker['name'])) 
                 return False
             case 5:
                 #check for correct id
@@ -165,7 +160,7 @@ class WithdrawProcess():
                 ]
                 markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
                 
-                text='Как получить код:\n\n1. Заходим на сайт букмекера\n2. Вывести со счета\n3. Выбираем наличные\n4. Пишем сумму\n5. Город: Бишкек\n6. Улица: GYM Kassa.KG\n\nДальше делаем все по инструкции после получения кода введите его здесь'
+                text='Как получить код:\n\n1. Заходим на сайт букмекера\n2. Вывести со счета\n3. Выбираем наличные\n4. Пишем сумму\n5. Город: {}\n6. Улица: GymKassa\n\nДальше делаем все по инструкции после получения кода введите его здесь.\nВведите код от вывода ({})'.format(self.bookmaker['city'], self.bookmaker['name'])
                 await update.message.reply_photo(photo=open('photos/instruction.jpg','rb'),caption=text, reply_markup=markup)
 
                 
