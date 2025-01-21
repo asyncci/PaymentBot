@@ -1,3 +1,6 @@
 __pycache__
 .env
-
+agreedUsers.json
+blockedUsers.json
+wallets.json
+bookmakers.json
