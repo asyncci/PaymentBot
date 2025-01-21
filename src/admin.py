@@ -1,19 +1,20 @@
 import asyncio
 from collections.abc import Awaitable, Callable, Coroutine
+from datetime import datetime, timedelta
 from functools import update_wrapper
 from io import UnsupportedOperation
 import json
 from logging import captureWarnings, error, exception
-from os import execle, getenv, replace
+from os import execle, getenv, replace, stat
 from typing import Any, List, Optional
 from dotenv import load_dotenv
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram._utils.argumentparsing import parse_lpo_and_dwpp
-from client import DepositProcess, WithdrawProcess
+from client import DepositProcess, WithdrawProcess, getAgreedUsers, loadAgreedUsers
 from wallets import Wallets
 from bookmakers import Bookmakers
 
-from telegram.ext import CallbackContext, ContextTypes
+from telegram.ext import CallbackContext, ContextTypes, JobQueue
 import re
 import inspect
 
@@ -178,13 +179,149 @@ class BlockedUsers():
                 await local_state.finalize(update, context)
                 adminInstance.local_state = None
                 await adminInstance.finishedState(update, context)
+class SetTimer(): 
+    @staticmethod
+    def is_valid_time(time_string):
+        """
+        Check if the given time string is in HH:MM format and valid.
+
+        Args:
+            time_string (str): The time string to check.
+
+        Returns:
+            bool: True if the time string is valid, False otherwise.
+        """
+        pattern = r"^(?:[01]\d|2[0-3]):[0-5]\d$"
+        return bool(re.match(pattern, time_string))
+
+
+    @staticmethod
+    def seconds_to_time(target_time):
+        """
+        Calculate the number of seconds from the current time to a given target time.
+
+        Args:
+            target_time (str): The target time in "HH:MM" format.
+
+        Returns:
+            int: Number of seconds from the current time to the target time.
+        """
+        try:
+            # Parse the target time
+            target = datetime.strptime(target_time, "%H:%M").time()
+            
+            # Get the current time
+            now = datetime.now()
+            current_time = now.time()
+
+            # Combine the current date with the target time
+            target_datetime = datetime.combine(now.date(), target)
+
+            # If the target time is earlier than the current time, assume it's for the next day
+            if target <= current_time:
+                target_datetime += timedelta(days=1)
+
+            # Calculate the difference in seconds
+            time_difference = target_datetime - now
+            return int(time_difference.total_seconds())
+
+        except ValueError:
+            raise ValueError("Invalid time format. Use 'HH:MM'.")
+
+
+    def __init__(self) -> None:
+        self.step = 1
+
+    async def run(self, update: Update, context: ContextTypes.DEFAULT_TYPE, user_response: str | None) -> bool:
+        reply = [
+                ['Отмена']
+            ]
+        markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
+        
+        #get response on previous question and ask actual
+        match self.step: 
+            case 1:
+                await update.message.reply_text('Напишите время рассылки в формате [HH:MM]:', reply_markup=markup)
+        
+                self.step += 1
+                return False
+            case 2: 
+                #get response for first question
+                valid = SetTimer.is_valid_time(user_response)
+                if valid == False:
+                    await update.message.reply_text('Напишите корректное время в правильном формате!', reply_markup=markup)
+                    return False
+
+                self.step += 1
+                self.time = user_response
+                return True
+       
+    async def finalize(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: 
+        time = self.time
+        seconds = SetTimer.seconds_to_time(time)
+        print(f"Seconds from now to {time}: {seconds}")
+        
+        if context.job_queue != None:
+            current_jobs = context.job_queue.jobs()
+
+            for job in current_jobs:
+                job.schedule_removal()
+        
+        context.job_queue.run_repeating(Newsletter.notifications, timedelta(days=1), seconds)
+
+        await update.message.reply_text('Время было изменено!')
+
+        #save to DB
+
+
+class Newsletter():
+    @staticmethod
+    async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        local_state = SetTimer()
+        adminInstance.local_state = local_state
+        await local_state.run(update, context, None)
+
+    @staticmethod
+    async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: 
+        user_response = update.message.text
+        
+        if user_response == 'Отмена':
+            adminInstance.local_state = None
+            adminInstance.state = Idle
+            await adminInstance.finishedState(update, context)
+        else: 
+            local_state = adminInstance.local_state
+            if local_state == None:
+                await invalid_reply(update, context)
+                return
+
+            finish = await local_state.run(update, context, user_response) 
+            if finish:
+                await local_state.finalize(update, context)
+                adminInstance.local_state = None
+                adminInstance.state = Idle
+                await adminInstance.finishedState(update, context)
+
+    @staticmethod
+    async def notifications(context: ContextTypes.DEFAULT_TYPE) -> None:
+        #get chat ids 
+        #make newsletter
+        users = loadAgreedUsers()
+        text = "Бот работает штатном режиме✅\n⏰ Мы всегда на связи : 24/7\n🚀 @GymKassa_KGbot 🚀\n💰 Пополнение | Толуктоо⚡\n💵 Вывод | Чыгаруу ⚡\n/start  /start  /start  /start" 
+
+        for user in users:
+            try:
+                await context.bot.send_message(chat_id=user, text=text)
+            except Exception as e:
+                print("Notifications, chat not found.")
 
 class Idle():
     @staticmethod
     async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         reply = [
             ['Кошельки', 'Букмекеры'],
-            ['Заблокированные пользователи']
+            ['Заблокированные пользователи'],
+            ['Изменить время рассылки'],
         ]
 
         markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
@@ -203,6 +340,9 @@ class Idle():
         elif user_response == 'Заблокированные пользователи':
             adminInstance.state = BlockedUsers
             await BlockedUsers.start(update, context)
+        elif user_response == 'Изменить время рассылки':
+            adminInstance.state = Newsletter
+            await Newsletter.start(update, context)
         else:
             await invalid_reply(update, context)
 

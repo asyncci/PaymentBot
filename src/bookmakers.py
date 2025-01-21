@@ -270,5 +270,6 @@ class Bookmakers():
             if finish:
                 await local_state.finalize(update, context)
                 admin.adminInstance.local_state = None
+                admin.adminInstance.state = admin.Idle
                 await admin.adminInstance.finishedState(update, context)
                 print(bookmakers)

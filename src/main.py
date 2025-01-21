@@ -1,7 +1,7 @@
 from logging import error 
 from os import getenv
 from dotenv import load_dotenv
-from telegram.ext import CallbackContext, CallbackQueryHandler, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram.ext import CallbackContext, CallbackQueryHandler, CommandHandler, ContextTypes, JobQueue, MessageHandler, filters
 from telegram import Update
 import logging
 import admin, client
@@ -52,10 +52,14 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 async def button_handler(update: Update, context: CallbackContext) -> None:
     await admin.button_handler(update, context)
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
+def main() -> None:
+    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                        level=logging.INFO)
 
-app.add_handler(CommandHandler('start', start));
-app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, handle_reply))
-app.add_handler(CallbackQueryHandler(button_handler))
-app.run_polling()
+    app.add_handler(CommandHandler('start', start));
+    app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, handle_reply))
+    app.add_handler(CallbackQueryHandler(button_handler))
+    app.run_polling(allowed_updates=Update.ALL_TYPES)
+    
+if __name__ == "__main__":
+    main()
