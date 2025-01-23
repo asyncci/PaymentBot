@@ -17,7 +17,7 @@ from bookmakers import Bookmakers
 from telegram.ext import CallbackContext, ContextTypes, JobQueue
 import re
 import inspect
-
+import pytz
 
 load_dotenv()
 try:
@@ -196,38 +196,48 @@ class SetTimer():
 
 
     @staticmethod
-    def seconds_to_time(target_time):
+    def seconds_to_time(target_time, local_timezone="Asia/Bishkek", server_timezone="Etc/UTC"):
         """
-        Calculate the number of seconds from the current time to a given target time.
+        Calculate the number of seconds from the current time (in UTC) to a given target time in the user's timezone.
 
         Args:
-            target_time (str): The target time in "HH:MM" format.
+            target_time (str): The target time in "HH:MM" format (in the local timezone).
+            local_timezone (str): The timezone where the target time is set (default is "Asia/Bishkek").
+            server_timezone (str): The server's timezone (default is "Etc/UTC").
 
         Returns:
-            int: Number of seconds from the current time to the target time.
+            int: Number of seconds from the current time (in UTC) to the target time.
         """
         try:
             # Parse the target time
-            target = (datetime.strptime(target_time, "%H:%M") - timedelta(hours=3)).time()
+            target = datetime.strptime(target_time, "%H:%M").time()
 
-            # Get the current time
-            print(target)
-            now = datetime.now()
-            current_time = now.time()
+            # Get the current time in the server's timezone (UTC)
+            server_tz = pytz.timezone(server_timezone)
+            now_utc = datetime.now(server_tz)
 
-            # Combine the current date with the target time
-            target_datetime = datetime.combine(now.date(), target)
+            # Get the local timezone object
+            local_tz = pytz.timezone(local_timezone)
 
-            # If the target time is earlier than the current time, assume it's for the next day
-            if target <= current_time:
-                target_datetime += timedelta(days=1)
+            # Combine the target time with today's date in the local timezone
+            local_datetime = datetime.combine(now_utc.date(), target)
+            local_datetime = local_tz.localize(local_datetime)  # Localize to the local timezone
+
+            # Convert the localized time to UTC
+            target_utc = local_datetime.astimezone(server_tz)
+
+            # If the target time in UTC is earlier than the current UTC time, move it to the next day
+            if target_utc <= now_utc:
+                target_utc += timedelta(days=1)
 
             # Calculate the difference in seconds
-            time_difference = target_datetime - now
+            time_difference = target_utc - now_utc
             return int(time_difference.total_seconds())
 
         except ValueError:
             raise ValueError("Invalid time format. Use 'HH:MM'.")
+        except pytz.UnknownTimeZoneError:
+            raise ValueError(f"Unknown timezone: {local_timezone} or {server_timezone}")
 
 
     def __init__(self) -> None:
