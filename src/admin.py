@@ -208,10 +208,10 @@ class SetTimer():
         """
         try:
             # Parse the target time
-            given = datetime.strptime(target_time, "%H:%M") - timedelta(hours=3)
-            target = given.time()
+            target = (datetime.strptime(target_time, "%H:%M") - timedelta(hours=3)).time()
 
             # Get the current time
+            print(target)
             now = datetime.now()
             current_time = now.time()
 
