@@ -397,7 +397,7 @@ class WithdrawAccept():
         self.chat = update.message.chat
         self.next_request_state = None
         self.id = id
-        self.done = False
+        self.shown_to_admin = False
 
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -422,10 +422,11 @@ class WithdrawAccept():
 
         message = await context.bot.send_message(chat_id=ADMIN_ID, reply_markup=markup, text=text, parse_mode='MarkdownV2')
         self.message_id = message.message_id
+        self.shown_to_admin = True   
         #await context.bot.send_message(chat_id=ADMIN_ID, reply_markup=markup, text=text)
 
     async def finish(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        self.done = True
+        self.shown_to_admin = True
         adminInstance.requests.pop(self.id)
         #if self.next_request_state != None:
         #    adminInstance.state = self.next_request_state
@@ -493,7 +494,7 @@ class DepositAccept():
         self.chat = update.message.chat
         self.next_request_state = None
         self.id = id
-        self.done = False
+        self.shown_to_admin = False
 
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -520,10 +521,10 @@ class DepositAccept():
         
         message = await context.bot.send_photo(chat_id=ADMIN_ID, reply_markup=markup, caption=text, photo=photo[0], parse_mode='MarkdownV2')
         self.message_id = message.message_id
+        self.shown_to_admin = True   
         #await context.bot.send_message(chat_id=ADMIN_ID, reply_markup=markup, text=text)
 
     async def finish(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        self.done = True   
         adminInstance.requests.pop(self.id)
         #if self.next_request_state != None:
         #    adminInstance.state = self.next_request_state
@@ -603,7 +604,7 @@ class Admin:
     async def runRequests(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         print("requests: ", self.requests)
         for request in self.requests:
-            if request.done == False:
+            if request.shown_to_admin == False:
                 await request.start(update, context)
 
     async def acceptRequests(self, id, user_response: str, update: Update, context: CallbackContext) -> None:
