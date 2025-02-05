@@ -318,8 +318,7 @@ class Newsletter():
         #get chat ids 
         #make newsletter
         users = loadAgreedUsers()
-        text = "Бот работает штатном режиме✅\n⏰ Мы всегда на связи : 24/7\n🚀 @GymKassa_KGbot 🚀\n💰 Пополнение | Толуктоо⚡\n💵 Вывод | Чыгаруу ⚡\n/start  /start  /start  /start" 
-
+        text = "⚜️Пополнение – АКТИВНО ✅\n⚜️ Вывод средств – АКТИВЕН ✅\n⚡️ Наш сервис работает 24/7! ⚡️ Быстро, 🔐 надежно и 🪙 удобно.\n\n❤️Получите бонус уже сейчас!\n🔓 Промокод: GYMKASSA\n❤️ (До 35 000 сом на ваш счет!)\n\n😀 Почему выбирают нас?\n😀 Моментальные операции – без ожиданий.\n🛡Надежность – ваши средства под защитой.\n📞 Поддержка 24/7 – всегда на связи.\n👌 Удобство – простой и понятный сервис.\n\n💡Как получить бонус?\n⚡️ Зарегистрируйтесь на платформе.\n⚡️ Введите промокод GYMKASSA\n⚡️ Заберите свой бонус и начните зарабатывать!\n\n✉️ Есть вопросы? Пишите нам: @igrokweb\n❤️Бот: @GymKassa_KGbot\n💛 С нами легко,выгодно и безопасно! Присоединяйтесь!" 
         for user in users:
             try:
                 await context.bot.send_message(chat_id=user, text=text)
@@ -427,6 +426,7 @@ class WithdrawAccept():
 
     async def finish(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         self.done = True
+        adminInstance.requests.pop(self.id)
         #if self.next_request_state != None:
         #    adminInstance.state = self.next_request_state
         #    await adminInstance.state.start(update, context)
@@ -523,7 +523,8 @@ class DepositAccept():
         #await context.bot.send_message(chat_id=ADMIN_ID, reply_markup=markup, text=text)
 
     async def finish(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        self.done = True    
+        self.done = True   
+        adminInstance.requests.pop(self.id)
         #if self.next_request_state != None:
         #    adminInstance.state = self.next_request_state
         #    await adminInstance.state.start(update, context)
@@ -600,6 +601,7 @@ class Admin:
         await self.state.start(update, context)
 
     async def runRequests(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        print("requests: ", self.requests)
         for request in self.requests:
             if request.done == False:
                 await request.start(update, context)
