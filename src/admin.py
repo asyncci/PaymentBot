@@ -6,11 +6,11 @@ from io import UnsupportedOperation
 import json
 from logging import captureWarnings, error, exception
 from os import execle, getenv, replace, stat
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 from dotenv import load_dotenv
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram._utils.argumentparsing import parse_lpo_and_dwpp
-from client import DepositProcess, WithdrawProcess, getAgreedUsers, loadAgreedUsers
+from client import DepositProcess, WithdrawProcess, admin, getAgreedUsers, loadAgreedUsers
 from wallets import Wallets
 from bookmakers import Bookmakers
 
@@ -18,6 +18,7 @@ from telegram.ext import CallbackContext, ContextTypes, JobQueue
 import re
 import inspect
 import pytz
+import os
 
 load_dotenv()
 try:
@@ -92,6 +93,27 @@ async def blockedUserIDs() -> list[str]:
     bookmakers = await getBlockedUsers()
     list_of_ids = list(map(lambda i: i['id'], bookmakers))
     return list_of_ids
+
+
+def loadAdminSettings() -> Dict[str, Any]:
+    try:
+        with open("adminSettings.json", "r") as final:
+            return json.load(final)
+    except FileNotFoundError:
+        with open("adminSettings.json", "w") as final:
+            json.dump({}, final, indent=4)
+        return {}
+
+async def saveAdminSettings():
+    with open("adminSettings.json", "w") as final:
+	    json.dump(adminSettings, final)
+
+settings = loadAdminSettings()
+
+if settings is None:
+    raise ValueError("Expected a value")
+
+adminSettings: Dict[str, Any] = settings
 
 class UnblockProcess():
 
@@ -332,6 +354,7 @@ class Idle():
             ['Кошельки', 'Букмекеры'],
             ['Заблокированные пользователи'],
             ['Изменить время рассылки'],
+            ['Вкл/Выкл Технические работы']
         ]
 
         markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
@@ -353,6 +376,12 @@ class Idle():
         elif user_response == 'Изменить время рассылки':
             adminInstance.state = Newsletter
             await Newsletter.start(update, context)
+        elif user_response == 'Вкл/Выкл Технические работы':
+            await adminInstance.technicalJobOnOff()
+            if adminInstance.technical_jobs == True:
+                await update.message.reply_text('Технические работы были ВКЛЮЧЕНЫ.')
+            else:
+                await update.message.reply_text('Технические работы были ВЫКЛЮЧЕНЫ.') 
         else:
             await invalid_reply(update, context)
 
@@ -360,6 +389,10 @@ class Idle():
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if(context.user_data == None):
         return; 
+
+    if admin.adminInstance.technical_jobs == True:
+        await update.message.reply_text('Технические работы ВКЛЮЧЕНЫ')
+
     state = Idle
     adminInstance.username = update.message.chat.username
     adminInstance.state = state
@@ -585,6 +618,7 @@ class Admin:
     #callback_states: List[DepositAccept | DepositAccept]
     next_state: Optional[Any] = None
     last_state: Optional[Any] = None
+    technical_jobs: bool = False
     _instance = None  # Class variable to store the instance
 
     requests: List[DepositAccept|WithdrawAccept] = []
@@ -596,6 +630,27 @@ class Admin:
         if not cls._instance:
             cls._instance = super().__new__(cls)
         return cls._instance
+
+    def __init__(self):
+        try: 
+            technical_jobs = adminSettings['technical_jobs']
+        except:
+            technical_jobs = "false"
+
+        if technical_jobs == "true":
+            self.technical_jobs = True
+        else:
+            self.technical_jobs = False
+
+    async def technicalJobOnOff(self):
+        self.technical_jobs = not self.technical_jobs
+
+        if self.technical_jobs:
+            adminSettings['technical_jobs'] = "true" 
+        else:
+            adminSettings['technical_jobs'] = "false"
+       
+        await saveAdminSettings()
 
     async def finishedState(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         await self.runRequests(update, context)

@@ -472,6 +472,11 @@ class NotAgreed():
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: 
     if(context.user_data == None):
         return;
+    
+    if admin.adminInstance.technical_jobs == True:
+        await update.message.reply_text('Ведутся технические работы.\nПопробуйте позже.')
+        return
+
 
     user = update.message.chat.id
     if user not in agreedUsers:
@@ -488,6 +493,11 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     try: 
         state = context.user_data['state']
         print(update.message.chat)
+        if state == IdleClient:
+            if admin.adminInstance.technical_jobs == True:
+                await update.message.reply_text('Ведутся технические работы.\nПопробуйте позже.')
+                return 
+
         await state.handle_reply(update, context)
     except Exception as e:
         print(e)

@@ -35,6 +35,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             await update.message.reply_text(text)
             return 
 
+        if admin.adminInstance.technical_jobs == True:
+            await update.message.reply_text('Ведутся технические работы.\nПопробуйте позже.')
+            return
+
         await client.start(update, context)
 
 async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

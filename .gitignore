@@ -1,5 +1,12 @@
 __pycache__
 .env
+venv/
+lib/
+lib64
+bin/
+include/
+pyvenv.cfg
+adminSettings.json
 agreedUsers.json
 blockedUsers.json
 wallets.json
