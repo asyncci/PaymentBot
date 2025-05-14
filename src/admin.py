@@ -48,6 +48,7 @@ async def invalid_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 async def callbackWithdraw(update: Update, context: ContextTypes.DEFAULT_TYPE, newWithdraw: WithdrawProcess) -> bool:
     chat_id = update.message.chat.id
+    print("CHAIUT ID", chat_id)
     
     if chat_id in adminInstance.requests:
         await update.message.reply_text("У вас висит заявка, пожалуйста подождите пока она будет обработана.")
@@ -61,6 +62,7 @@ async def callbackWithdraw(update: Update, context: ContextTypes.DEFAULT_TYPE, n
 
 async def callbackDeposit(update: Update, context: ContextTypes.DEFAULT_TYPE, newDeposit: DepositProcess) -> bool:
     chat_id = update.message.chat.id
+    print("CHAIUT ID", chat_id)
     
     if chat_id in adminInstance.requests:
         await update.message.reply_text("У вас висит заявка, пожалуйста подождите пока она будет обработана.")
@@ -674,9 +676,5 @@ class Admin:
     async def acceptRequests(self, id, user_response: str, update: Update, context: CallbackContext) -> None:
         id = int(id)
         await self.requests[id].button_handler(user_response, update, context)
-        self.countReqsDone += 1
-        if self.countReqsDone == len(self.requests):
-            self.countReqsDone = 0
-            self.requests.clear()
 
 adminInstance = Admin()
