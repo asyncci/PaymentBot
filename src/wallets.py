@@ -11,7 +11,7 @@ def loadWallets():
         print("File wallets.json not found.")
         return []
     except:
-        print("Errors with json file.")
+        print("Errors with wallets.json file.")
         return []
 
 wallets = loadWallets()

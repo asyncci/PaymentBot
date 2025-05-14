@@ -46,19 +46,31 @@ async def invalid_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     print(f"Function was called from {stack[1].function} in {stack[1].filename} at line {stack[1].lineno}")
     await update.message.reply_text("Нет такого варианта ответа -.")
 
-async def callbackWithdraw(update: Update, context: ContextTypes.DEFAULT_TYPE, newWithdraw: WithdrawProcess) -> None:
-    id = len(adminInstance.requests)
-    state = WithdrawAccept(id, newWithdraw, adminInstance.state, update, context)
-    adminInstance.requests.append(state)
+async def callbackWithdraw(update: Update, context: ContextTypes.DEFAULT_TYPE, newWithdraw: WithdrawProcess) -> bool:
+    chat_id = update.message.chat.id
+    
+    if chat_id in adminInstance.requests:
+        await update.message.reply_text("У вас висит заявка, пожалуйста подождите пока она будет обработана.")
+        return False
+    
+    state = WithdrawAccept(newWithdraw, adminInstance.state, update, context)
+    adminInstance.requests[chat_id] = state
     if adminInstance.local_state == None:
         await adminInstance.runRequests(update, context)
+        return True
 
-async def callbackDeposit(update: Update, context: ContextTypes.DEFAULT_TYPE, newDeposit: DepositProcess) -> None:
-    id = len(adminInstance.requests)
-    state = DepositAccept(id, newDeposit, adminInstance.state, update, context)
-    adminInstance.requests.append(state)
+async def callbackDeposit(update: Update, context: ContextTypes.DEFAULT_TYPE, newDeposit: DepositProcess) -> bool:
+    chat_id = update.message.chat.id
+    
+    if chat_id in adminInstance.requests:
+        await update.message.reply_text("У вас висит заявка, пожалуйста подождите пока она будет обработана.")
+        return False
+
+    state = DepositAccept(newDeposit, adminInstance.state, update, context)
+    adminInstance.requests[chat_id] = state
     if adminInstance.local_state == None:
         await adminInstance.runRequests(update, context)
+        return True 
 
 def loadBlockedUsers():
     try:
@@ -68,7 +80,7 @@ def loadBlockedUsers():
         print("File blockedUsers.json not found.")
         return []
     except:
-        print("Errors with json file.")
+        print("Errors with blockedUsers.json file.")
         return []
 
 blockedUsers = loadBlockedUsers()
@@ -418,7 +430,7 @@ async def button_handler(update: Update, context: CallbackContext) -> None:
 
 
 class WithdrawAccept(): 
-    def __init__(self, id , newWithdraw: WithdrawProcess, previous_state: Optional[Any], update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    def __init__(self, newWithdraw: WithdrawProcess, previous_state: Optional[Any], update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         self.withdraw = newWithdraw
         self.previous_state = previous_state 
         username = update.message.chat.username
@@ -429,7 +441,6 @@ class WithdrawAccept():
 
         self.chat = update.message.chat
         self.next_request_state = None
-        self.id = id
         self.shown_to_admin = False
 
 
@@ -439,16 +450,16 @@ class WithdrawAccept():
         
         reply = [
              [
-                  InlineKeyboardButton('Принять', callback_data=json.dumps({'id': str(self.id), 'option': 'accept'})), 
-                  InlineKeyboardButton('Отклонить', callback_data=json.dumps({'id': str(self.id), 'option': 'decline'}))
+                  InlineKeyboardButton('Принять', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'accept'})), 
+                  InlineKeyboardButton('Отклонить', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'decline'}))
             ],
-            [     InlineKeyboardButton('Заблокировать', callback_data=json.dumps({'id': str(self.id), 'option': 'block'})) 
+            [     InlineKeyboardButton('Заблокировать', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'block'})) 
             ]
         ]
 
         markup = InlineKeyboardMarkup(reply)
         
-        text = "ВЫВОД от пользователя: {}\n\nБукмекер: {}\nId на сайте: `{}`\nВывод по: {}\nНомер: `{}`\nСумма: `{}`\nКОД: `{}`".format(username, withdraw.bookmaker['name'], withdraw.id, withdraw.wallet['name'], withdraw.phone, withdraw.money, withdraw.code)
+        text = "ВЫВОД от пользователя: {}\n\nБукмекер: {}\nId на сайте: `{}`\nВывод по: {}\nНомер: `{}`\nСумма: `{}`\nКОД: `{}`".format(username, withdraw.bookmaker['name'], withdraw.id, withdraw.wallet['name'], withdraw.details, withdraw.money, withdraw.code)
         
         special_chars = r"_*[]()~>#+-=|{}.!\\"
         text = escape_special_characters(text, special_chars)
@@ -459,8 +470,7 @@ class WithdrawAccept():
         #await context.bot.send_message(chat_id=ADMIN_ID, reply_markup=markup, text=text)
 
     async def finish(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        self.shown_to_admin = True
-        adminInstance.requests.pop(self.id)
+        del adminInstance.requests[self.chat.id]
         #if self.next_request_state != None:
         #    adminInstance.state = self.next_request_state
         #    await adminInstance.state.start(update, context)
@@ -515,7 +525,7 @@ class WithdrawAccept():
 
 
 class DepositAccept(): 
-    def __init__(self, id, newDeposit: DepositProcess, previous_state: Optional[Any], update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    def __init__(self, newDeposit: DepositProcess, previous_state: Optional[Any], update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         self.deposit = newDeposit
         self.previous_state = previous_state 
         username = update.message.chat.username
@@ -526,7 +536,6 @@ class DepositAccept():
 
         self.chat = update.message.chat
         self.next_request_state = None
-        self.id = id
         self.shown_to_admin = False
 
 
@@ -536,16 +545,16 @@ class DepositAccept():
         
         reply = [
              [
-                  InlineKeyboardButton('Принять', callback_data=json.dumps({'id': str(self.id), 'option': 'accept'})), 
-                  InlineKeyboardButton('Отклонить', callback_data=json.dumps({'id': str(self.id), 'option': 'decline'}))
+                  InlineKeyboardButton('Принять', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'accept'})), 
+                  InlineKeyboardButton('Отклонить', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'decline'}))
             ],
-            [     InlineKeyboardButton('Заблокировать', callback_data=json.dumps({'id': str(self.id), 'option': 'block'})) 
+            [     InlineKeyboardButton('Заблокировать', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'block'})) 
             ]
         ]
 
         markup = InlineKeyboardMarkup(reply)
         
-        names = " ".join(self.deposit.details)
+        names = " ".join(self.deposit.clientName)
         text = "ПОПОЛНЕНИЕ от пользователя: {}\n\nБукмекер: {}\nПополнение по: {}\nФИО: {}\nId на сайте: `{}`\nСумма: `{}`".format(username, deposit.bookmaker, deposit.wallet['name'], names, deposit.id, deposit.money)
         photo = deposit.photo
          
@@ -558,7 +567,7 @@ class DepositAccept():
         #await context.bot.send_message(chat_id=ADMIN_ID, reply_markup=markup, text=text)
 
     async def finish(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        adminInstance.requests.pop(self.id)
+        del adminInstance.requests[self.chat.id]
         #if self.next_request_state != None:
         #    adminInstance.state = self.next_request_state
         #    await adminInstance.state.start(update, context)
@@ -621,7 +630,7 @@ class Admin:
     technical_jobs: bool = False
     _instance = None  # Class variable to store the instance
 
-    requests: List[DepositAccept|WithdrawAccept] = []
+    requests: Dict[int, DepositAccept|WithdrawAccept] = {}
     countReqsDone: int = 0
     
     username: str = ''
@@ -658,9 +667,9 @@ class Admin:
 
     async def runRequests(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         print("requests: ", self.requests)
-        for request in self.requests:
-            if request.shown_to_admin == False:
-                await request.start(update, context)
+        for _, value in self.requests.items():
+            if value.shown_to_admin == False:
+                await value.start(update, context)
 
     async def acceptRequests(self, id, user_response: str, update: Update, context: CallbackContext) -> None:
         id = int(id)

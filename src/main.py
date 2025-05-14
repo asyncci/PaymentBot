@@ -67,3 +67,8 @@ def main() -> None:
     
 if __name__ == "__main__":
     main()
+
+#remember
+#id
+#first name, last name
+#details
