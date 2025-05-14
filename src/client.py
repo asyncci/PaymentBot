@@ -172,8 +172,11 @@ class WithdrawProcess():
                 return True
 
     async def finalize(self, update: Update, context: ContextTypes.DEFAULT_TYPE, user_response: str | None) -> None:
-        await update.message.reply_text('⏳ Заявка на вывод успешно создана, время выплаты от 1 минуты до 3 часов, пожалуйста дождитесь\n\nID аккаунта: {}\nНаписать администратору: '.format(self.id) + '@' + admin.adminInstance.username.format(self.id))
-        await admin.callbackWithdraw(update, context, self)
+        canSend = await admin.callbackWithdraw(update, context, self)
+        if canSend:
+            await update.message.reply_text('⏳ Заявка на вывод успешно создана, время выплаты от 1 минуты до 3 часов, пожалуйста дождитесь\n\nID аккаунта: {}\nНаписать администратору: '.format(self.id) + '@' + admin.adminInstance.username.format(self.id))
+        else:   
+            await update.message.reply_text('Вы уже отправили заявку. Пожалуйста, подождите пока она будет обработана.')
 
 class Withdraw(): 
     @staticmethod
@@ -262,6 +265,10 @@ class DepositProcess():
                 return False
             case 4:
                 #check for correct name
+                if user_response == None:
+                    await update.message.reply_text('❗️Будьте внимательны повторите ввод Имени и Фамилии отправителя:')
+                    return False
+
                 details = user_response.split(' ')
                 if len(details) < 2:
                     try:
@@ -347,8 +354,11 @@ class DepositProcess():
                 return True
 
     async def finalize(self, update: Update, context: ContextTypes.DEFAULT_TYPE, user_response: str | None) -> None:
-        await update.message.reply_text('⏳ Идет проверка...\n\nЕсли проверка занимает больше 10 минут пожалуйста напишите: ' + '@' + admin.adminInstance.username)
-        await admin.callbackDeposit(update, context, self)
+        canSend = await admin.callbackDeposit(update, context, self)
+        if canSend:
+            await update.message.reply_text('⏳ Идет проверка...\n\nЕсли проверка занимает больше 10 минут пожалуйста напишите: ' + '@' + admin.adminInstance.username)
+        else:
+            await update.message.reply_text('Вы уже отправили заявку. Пожалуйста подождите пока она будет обработана')
 
 class Deposit(): 
     @staticmethod
@@ -398,9 +408,17 @@ class IdleClient():
         user_response = update.message.text
 
         if user_response == 'Пополнить':
+            if update.message.chat.id in admin.adminInstance.requests:
+                await update.message.reply_text('Предыдущая заявка отправлена. Пожалуйста, подождите пока предыдущая заявка будет обработана.')
+                return
+
             context.user_data['state'] = Deposit
             await Deposit.pick_bookmaker(update, context)
         elif user_response == 'Вывести':
+            if update.message.chat.id in admin.adminInstance.requests:
+                await update.message.reply_text('Предыдущая заявка отправлена. Пожалуйста, подождите пока предыдущая заявка будет обработана.')
+                return
+
             context.user_data['state'] = Withdraw
             await Withdraw.pick_bookmaker(update, context)
         else:
@@ -418,7 +436,7 @@ def loadAgreedUsers():
         print("File agreedUsers.json not found.")
         return []
     except:
-        print("Errors with json file.")
+        print("Errors with agreedUsers.json file.")
         return []
 
 agreedUsers = loadAgreedUsers()
@@ -504,3 +522,7 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await start(update, context)
 
 
+#remember
+#id
+#first name, last name
+#details

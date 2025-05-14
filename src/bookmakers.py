@@ -12,7 +12,7 @@ def loadBookmakers():
         print("File bookmakers.json not found.")
         return []
     except:
-        print("Errors with json file.")
+        print("Errors with bookmakers.json file.")
         return []
 
 bookmakers = loadBookmakers()
