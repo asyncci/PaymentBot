@@ -411,7 +411,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await state.start(update, context)
 
 async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    print(vars(adminInstance))
     if (context.user_data == None):
         return
     try: 
@@ -459,7 +458,7 @@ class WithdrawAccept():
 
         markup = InlineKeyboardMarkup(reply)
         
-        text = "ВЫВОД от пользователя: {}\n\nБукмекер: {}\nId на сайте: `{}`\nВывод по: {}\nНомер: `{}`\nСумма: `{}`\nКОД: `{}`".format(username, withdraw.bookmaker['name'], withdraw.id, withdraw.wallet['name'], withdraw.details, withdraw.money, withdraw.code)
+        text = "ВЫВОД от пользователя: {}\n\nБукмекер: {}\nId на сайте: `{}`\nВывод по: {}\nНомер: `{}`\nСумма: `{}`\nКОД: `{}`".format(username, withdraw.bookmaker['name'], withdraw.bookmakerId, withdraw.wallet['name'], withdraw.details, withdraw.money, withdraw.code)
         
         special_chars = r"_*[]()~>#+-=|{}.!\\"
         text = escape_special_characters(text, special_chars)
@@ -512,7 +511,7 @@ class WithdrawAccept():
             await invalid_reply(update, context)
 
     async def _accept_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        text = '✅ Вывод выполнен\n💸 Выведено: {} KGS\n🆔 Счет: {}'.format(self.withdraw.money, self.withdraw.id)
+        text = '✅ Вывод выполнен\n💸 Выведено: {} KGS\n🆔 Счет: {}'.format(self.withdraw.money, self.withdraw.bookmakerId)
         await context.bot.send_message(chat_id=self.chat.id, text=text)
 
     async def _decline_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -555,7 +554,7 @@ class DepositAccept():
         markup = InlineKeyboardMarkup(reply)
         
         names = " ".join(self.deposit.clientName)
-        text = "ПОПОЛНЕНИЕ от пользователя: {}\n\nБукмекер: {}\nПополнение по: {}\nФИО: {}\nId на сайте: `{}`\nСумма: `{}`".format(username, deposit.bookmaker, deposit.wallet['name'], names, deposit.id, deposit.money)
+        text = "ПОПОЛНЕНИЕ от пользователя: {}\n\nБукмекер: {}\nПополнение по: {}\nФИО: {}\nId на сайте: `{}`\nСумма: `{}`".format(username, deposit.bookmaker, deposit.wallet['name'], names, deposit.bookmakerId, deposit.money)
         photo = deposit.photo
          
         special_chars = r"_*[]()~>#+-=|{}.!\\"
@@ -608,7 +607,7 @@ class DepositAccept():
             await invalid_reply(update, context)
 
     async def _accept_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        text = '✅ Депозит выполнен\n💸 Ваш счет пополнен: {} KGS\n🆔 Счет: {}'.format(self.deposit.money, self.deposit.id)
+        text = '✅ Депозит выполнен\n💸 Ваш счет пополнен: {} KGS\n🆔 Счет: {}'.format(self.deposit.money, self.deposit.bookmakerId)
         await context.bot.send_message(chat_id=self.chat.id, text=text)
 
     async def _decline_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
