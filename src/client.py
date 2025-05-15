@@ -2,6 +2,7 @@ from functools import update_wrapper
 from io import UnsupportedOperation
 import json
 import re
+from typing import Tuple
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, MessageOriginHiddenUser, ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram._utils.types import ReplyMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler  
@@ -116,7 +117,7 @@ class WithdrawProcess():
                 return False
             case 4:
                 self.step += 1
-                self.phone = user_response
+                self.details = user_response
                 text = "Введите ID вашего счета {}"
                 await update.message.reply_photo(photo=open('photos/xbet.jpg','rb'), caption=text.format(self.bookmaker['name'])) 
                 return False
@@ -126,9 +127,9 @@ class WithdrawProcess():
                     await invalid_reply(update, context)
                     return False
 
-                id = user_response
+                bookmakerId = user_response
  
-                isDigit = id.isdigit()
+                isDigit = bookmakerId.isdigit()
                 if isDigit == False:
                     await update.message.reply_text('Введите ID!')
                     return False
@@ -143,7 +144,7 @@ class WithdrawProcess():
                 await update.message.reply_text(text, reply_markup=markup)
 
                 self.step += 1
-                self.id = id
+                self.bookmakerId = bookmakerId
 
                 return False
             case 6:
@@ -172,9 +173,13 @@ class WithdrawProcess():
                 return True
 
     async def finalize(self, update: Update, context: ContextTypes.DEFAULT_TYPE, user_response: str | None) -> None:
-        canSend = await admin.callbackWithdraw(update, context, self)
-        if canSend:
-            await update.message.reply_text('⏳ Заявка на вывод успешно создана, время выплаты от 1 минуты до 3 часов, пожалуйста дождитесь\n\nID аккаунта: {}\nНаписать администратору: '.format(self.id) + '@' + admin.adminInstance.username.format(self.id))
+        isSent = await admin.callbackWithdraw(update, context, self)
+        if isSent:
+            await editAgreedUsers(update.message.chat.id, {
+                "details": self.details,
+                "bookmakerId": self.bookmakerId
+            })
+            await update.message.reply_text('⏳ Заявка на вывод успешно создана, время выплаты от 1 минуты до 3 часов, пожалуйста дождитесь\n\nID аккаунта: {}\nНаписать администратору: '.format(self.bookmakerId) + '@' + admin.adminInstance.username.format(self.bookmakerId))
         else:   
             await update.message.reply_text('Вы уже отправили заявку. Пожалуйста, подождите пока она будет обработана.')
 
@@ -211,10 +216,19 @@ class DepositProcess():
 
     def __init__(self) -> None:
         self.step = 1
+    #                                                                                                   return type of tuple: first - isFinished, second - should it skip one step, since data is already stored
+    async def run(self, update: Update, context: ContextTypes.DEFAULT_TYPE, user_response: str | None) -> Tuple[bool, bool]: 
 
-    async def run(self, update: Update, context: ContextTypes.DEFAULT_TYPE, user_response: str | None) -> bool: 
-        
+        changes = context.user_data['changes']
+        try: 
+            clientName = agreedUsers[str(update.message.chat.id)].clientName
+        except:
+            clientName = None
 
+        try:
+            bookmakerId = agreedUsers[str(update.message.chat.id)].bookmakerId
+        except:
+            bookmakerId = None
         match self.step:
             case 1:
                 self.step += 1
@@ -225,12 +239,11 @@ class DepositProcess():
                 markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
 
                 await update.message.reply_text('Выберите букмекер 👇', reply_markup=markup)
-                return False
+                return False, False
             case 2:
                 if user_response not in await bookmakers.bookmakerNames() :
-                    print("geoko")
                     await invalid_reply(update, context)
-                    return False
+                    return False, False
 
                 self.step += 1
                 self.bookmaker = user_response
@@ -241,11 +254,11 @@ class DepositProcess():
                 markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
 
                 await update.message.reply_text('Выберите способ пополнения👇', reply_markup=markup)
-                return False
+                return False, False
             case 3:
                 if user_response not in await wallets.walletNames():
                     await invalid_reply(update, context)
-                    return False
+                    return False, False
 
                 self.step += 1
                 
@@ -254,49 +267,66 @@ class DepositProcess():
                 for i in walletsStack:
                     if i['name'] == user_response:
                         self.wallet = i
-                
-                reply = [
-                    ['Отмена']
-                ]
 
-                markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
-                text = "⚠️ Пожалуйста введите ваше имя и фамилию в {}, чтобы идентифицировать ваше пополнение, при неверном имени пополнение будет отказано:"
-                await update.message.reply_photo(photo=open('photos/mbank.jpg','rb'), caption=text.format(self.wallet['name']), reply_markup=markup)
-                return False
+                if changes or clientName == None:
+                    reply = [
+                        ['Отмена']
+                    ]
+
+                    markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
+                    text = "⚠️ Пожалуйста введите ваше имя и фамилию в {}, чтобы идентифицировать ваше пополнение, при неверном имени пополнение будет отказано:"
+                    await update.message.reply_photo(photo=open('photos/mbank.jpg','rb'), caption=text.format(self.wallet['name']), reply_markup=markup)
+                    return False, False 
+
+                return False, True
             case 4:
                 #check for correct name
-                if user_response == None:
-                    await update.message.reply_text('❗️Будьте внимательны повторите ввод Имени и Фамилии отправителя:')
-                    return False
-
-                details = user_response.split(' ')
-                if len(details) < 2:
-                    try:
-                        if len(details[0]) < 2 and len(details[1]) < 2:
-                            await update.message.reply_text('❗️Будьте внимательны повторите ввод Имени и Фамилии отправителя:')
-                            return False
-                    except:
+                if changes or clientName == None:
+                    if user_response == None:
                         await update.message.reply_text('❗️Будьте внимательны повторите ввод Имени и Фамилии отправителя:')
-                        return False
-                
+                        return False, False
+
+                    newClientName = user_response.split(' ')
+                    if len(newClientName) < 2:
+                        try:
+                            if len(newClientName[0]) < 2 and len(newClientName[1]) < 2:
+                                await update.message.reply_text('❗️Будьте внимательны повторите ввод Имени и Фамилии отправителя:')
+                                return False, False
+                        except:
+                            await update.message.reply_text('❗️Будьте внимательны повторите ввод Имени и Фамилии отправителя:')
+                            return False, False
+                    self.clientName = newClientName
+                else:
+                    self.clientName = clientName
+
                 self.step += 1
-                self.details = details
-                text = "Введите ID вашего счета {}"
-                await update.message.reply_photo(photo=open('photos/xbet.jpg','rb'), caption=text.format(self.bookmaker)) 
-                return False
+
+                if changes or bookmakerId == None:
+                    text = "Введите ID вашего счета {}"
+                    await update.message.reply_photo(photo=open('photos/xbet.jpg','rb'), caption=text.format(self.bookmaker)) 
+                    return False, False
+
+                return False, True
             case 5:
                 #check for correct id
-                if (user_response == None):
-                    await invalid_reply(update, context)
-                    return False
+                if changes or bookmakerId == None:
 
-                id = user_response
+                    if (user_response == None):
+                        await invalid_reply(update, context)
+                        return False, False
+
+                    newBookmakerId = user_response
  
-                isDigit = id.isdigit()
-                if isDigit == False:
-                    await update.message.reply_text('Введите ID!')
-                    return False
+                    isDigit = newBookmakerId.isdigit()
+                    if isDigit == False:
+                        await update.message.reply_text('Введите ID!')
+                        return False, False
+                    
+                    self.bookmakerId = newBookmakerId
+                else:
+                    self.bookmakerId = bookmakerId
 
+                self.step += 1
 
                 reply = [
                     ['50', '100'],
@@ -308,10 +338,7 @@ class DepositProcess():
                 text = "Введите сумму или выберите из списка пополнения KGS\nМинимум: 50\nМаксимум: 50000"
                 await update.message.reply_text(text, reply_markup=markup)
 
-                self.step += 1
-                self.id = id
-
-                return False
+                return False, True
             case 6:
                 money = user_response
 
@@ -319,11 +346,11 @@ class DepositProcess():
                     money = int(money)
                 except:
                     await update.message.reply_text('Введите сумму!')
-                    return False
+                    return False, False
  
                 if money < 50 or money > 50000:
                     await update.message.reply_text('Введите разрешимую сумму!')
-                    return False
+                    return False, False
 
                 warning_text = '⚠️ Пополнение от 3х лиц запрещено, используйте только свой кошелек\n❗️Терминал, единицы пополнение строго запрещено, вы потеряете деньги если пополните с терминала'
                 await update.message.reply_text(warning_text)
@@ -343,19 +370,26 @@ class DepositProcess():
                 
                 self.step += 1
                 self.money = money
-                return False
+                return False, False
             case _:
                 photo = update.message.photo
                 if len(photo) == 0:
                     await update.message.reply_text('Требуется скриншот!')
-                    return False
+                    return False, False
 
                 self.photo = photo
-                return True
+                return True, False
 
     async def finalize(self, update: Update, context: ContextTypes.DEFAULT_TYPE, user_response: str | None) -> None:
-        canSend = await admin.callbackDeposit(update, context, self)
-        if canSend:
+        isSent = await admin.callbackDeposit(update, context, self)
+        if isSent:
+            changes = context.user_data['changes']
+
+            if changes:
+                await editAgreedUsers(update.message.chat.id, {
+                    "clientName": self.clientName,
+                    "bookmakerId": self.bookmakerId,
+                }) 
             await update.message.reply_text('⏳ Идет проверка...\n\nЕсли проверка занимает больше 10 минут пожалуйста напишите: ' + '@' + admin.adminInstance.username)
         else:
             await update.message.reply_text('Вы уже отправили заявку. Пожалуйста подождите пока она будет обработана')
@@ -381,8 +415,11 @@ class Deposit():
                 await invalid_reply(update, context)
                 return
 
-            finish = await local_state.run(update, context, user_response) 
+            finish, skip = await local_state.run(update, context, user_response) 
             
+            if skip:
+                await local_state.run(update, context, user_response)
+
             if finish:
                 await local_state.finalize(update, context, user_response)
                 context.user_data['local_state'] = None
@@ -395,7 +432,9 @@ class IdleClient():
         text = "Добро пожаловать в GYM Kassa⚽️\n\n⚡️ Моментальные пополнения\n"
     
         reply = [
-            ['Пополнить', 'Вывести']
+            ['Пополнить', 'Вывести'],
+            ['Пополнить с изменениями'],
+            ['Вывести с изменениями']
         ]
 
         markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
@@ -413,6 +452,7 @@ class IdleClient():
                 return
 
             context.user_data['state'] = Deposit
+            context.user_data['changes'] = False
             await Deposit.pick_bookmaker(update, context)
         elif user_response == 'Вывести':
             if update.message.chat.id in admin.adminInstance.requests:
@@ -420,6 +460,23 @@ class IdleClient():
                 return
 
             context.user_data['state'] = Withdraw
+            context.user_data['changes'] = False
+            await Withdraw.pick_bookmaker(update, context)
+        if user_response == 'Пополнить с изменениями':
+            if update.message.chat.id in admin.adminInstance.requests:
+                await update.message.reply_text('Предыдущая заявка отправлена. Пожалуйста, подождите пока предыдущая заявка будет обработана.')
+                return
+
+            context.user_data['state'] = Deposit
+            context.user_data['changes'] = True
+            await Deposit.pick_bookmaker(update, context)
+        elif user_response == 'Вывести c изменениями':
+            if update.message.chat.id in admin.adminInstance.requests:
+                await update.message.reply_text('Предыдущая заявка отправлена. Пожалуйста, подождите пока предыдущая заявка будет обработана.')
+                return
+
+            context.user_data['state'] = Withdraw
+            context.user_data['changes'] = True
             await Withdraw.pick_bookmaker(update, context)
         else:
             await invalid_reply(update, context)
@@ -434,24 +491,24 @@ def loadAgreedUsers():
             return json.load(final)
     except FileNotFoundError:
         print("File agreedUsers.json not found.")
-        return []
+        return {}
     except:
         print("Errors with agreedUsers.json file.")
-        return []
+        return {}
 
 agreedUsers = loadAgreedUsers()
 
 async def getAgreedUsers():
     return agreedUsers
 
-async def addAgreedUsers(user):
-    agreedUsers.append(user)
+async def addAgreedUsers(id):
+    agreedUsers[str(id)] = {}
 
 async def deleteAgreedUsers(id):
-    agreedUsers.pop(id)
+    del agreedUsers[str(id)]
 
 async def editAgreedUsers(id, data):
-    agreedUsers[id] = data
+    agreedUsers[str(id)] = data
 
 async def saveAgreedUsersDB():
     with open("agreedUsers.json", "w") as final:
@@ -495,9 +552,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text('Ведутся технические работы.\nПопробуйте позже.')
         return
 
-
     user = update.message.chat.id
-    if user not in agreedUsers:
+    if str(user) not in agreedUsers:
         state = NotAgreed
     else:
         state = IdleClient

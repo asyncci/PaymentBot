@@ -48,8 +48,7 @@ async def invalid_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 async def callbackWithdraw(update: Update, context: ContextTypes.DEFAULT_TYPE, newWithdraw: WithdrawProcess) -> bool:
     chat_id = update.message.chat.id
-    print("CHAIUT ID", chat_id)
-    
+
     if chat_id in adminInstance.requests:
         await update.message.reply_text("У вас висит заявка, пожалуйста подождите пока она будет обработана.")
         return False
@@ -62,7 +61,6 @@ async def callbackWithdraw(update: Update, context: ContextTypes.DEFAULT_TYPE, n
 
 async def callbackDeposit(update: Update, context: ContextTypes.DEFAULT_TYPE, newDeposit: DepositProcess) -> bool:
     chat_id = update.message.chat.id
-    print("CHAIUT ID", chat_id)
     
     if chat_id in adminInstance.requests:
         await update.message.reply_text("У вас висит заявка, пожалуйста подождите пока она будет обработана.")
@@ -461,7 +459,7 @@ class WithdrawAccept():
 
         markup = InlineKeyboardMarkup(reply)
         
-        text = "ВЫВОД от пользователя: {}\n\nБукмекер: {}\nId на сайте: `{}`\nВывод по: {}\nНомер: `{}`\nСумма: `{}`\nКОД: `{}`".format(username, withdraw.bookmaker['name'], withdraw.id, withdraw.wallet['name'], withdraw.phone, withdraw.money, withdraw.code)
+        text = "ВЫВОД от пользователя: {}\n\nБукмекер: {}\nId на сайте: `{}`\nВывод по: {}\nНомер: `{}`\nСумма: `{}`\nКОД: `{}`".format(username, withdraw.bookmaker['name'], withdraw.id, withdraw.wallet['name'], withdraw.details, withdraw.money, withdraw.code)
         
         special_chars = r"_*[]()~>#+-=|{}.!\\"
         text = escape_special_characters(text, special_chars)
@@ -556,7 +554,7 @@ class DepositAccept():
 
         markup = InlineKeyboardMarkup(reply)
         
-        names = " ".join(self.deposit.details)
+        names = " ".join(self.deposit.clientName)
         text = "ПОПОЛНЕНИЕ от пользователя: {}\n\nБукмекер: {}\nПополнение по: {}\nФИО: {}\nId на сайте: `{}`\nСумма: `{}`".format(username, deposit.bookmaker, deposit.wallet['name'], names, deposit.id, deposit.money)
         photo = deposit.photo
          
