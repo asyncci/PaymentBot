@@ -1,8 +1,9 @@
 from logging import error 
 from os import getenv
+from typing import Dict, List
 from dotenv import load_dotenv
 from telegram.ext import CallbackContext, CallbackQueryHandler, CommandHandler, ContextTypes, JobQueue, MessageHandler, filters
-from telegram import Update
+from telegram import Message, MessageAutoDeleteTimerChanged, Update
 import logging
 import admin, client
 
@@ -18,6 +19,12 @@ try:
     ADMIN_ID = int(getenv("ADMIN_ID"))
 except:
     error('Admin ID not provided in .env')
+    quit()
+
+try:
+    TECHNICIAN_ID = int(getenv("TECHNICIAN_ID"))
+except:
+    error('Technician ID not provided in .env')
     quit()
 
 from telegram.ext import ApplicationBuilder
@@ -56,11 +63,30 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 async def button_handler(update: Update, context: CallbackContext) -> None:
     await admin.button_handler(update, context)
 
+async def technical_jobs(update: Update, context: CallbackContext) -> None:
+    userId = update.message.chat.id
+    if userId == TECHNICIAN_ID:
+        await admin.adminInstance.technicalJobOnOff()
+        
+        if admin.adminInstance.technical_jobs == True:
+            await update.message.reply_text('Технические работы включены')
+            
+            await update.message.reply_text('Ongoing requests:')
+            for key, value in admin.adminInstance.requests.items(): 
+                requestName = value.__class__.__name__
+                message = await update.message.reply_text("Chat id {}: {} request".format(key, requestName))
+                admin.technicianInstance.messages[key] = message
+        else:
+            await update.message.reply_text('Технические работы отключены')
+        
+
+
 def main() -> None:
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                         level=logging.INFO)
 
     app.add_handler(CommandHandler('start', start));
+    app.add_handler(CommandHandler('technical_jobs', technical_jobs));
     app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, handle_reply))
     app.add_handler(CallbackQueryHandler(button_handler))
     app.run_polling(allowed_updates=Update.ALL_TYPES)
