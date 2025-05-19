@@ -42,10 +42,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             await update.message.reply_text(text)
             return 
 
-        if admin.adminInstance.technical_jobs == True:
-            await update.message.reply_text('Ведутся технические работы.\nПопробуйте позже.')
-            return
-
         await client.start(update, context)
 
 async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -76,6 +72,7 @@ async def technical_jobs(update: Update, context: CallbackContext) -> None:
                 requestName = value.__class__.__name__
                 message = await update.message.reply_text("Chat id {}: {} request".format(key, requestName))
                 admin.technicianInstance.messages[key] = message
+
         else:
             await update.message.reply_text('Технические работы отключены')
         

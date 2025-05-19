@@ -354,7 +354,7 @@ class Newsletter():
         #make newsletter
         users = loadAgreedUsers()
         text = "⚜️Пополнение – АКТИВНО ✅\n⚜️ Вывод средств – АКТИВЕН ✅\n⚡️ Наш сервис работает 24/7! ⚡️ Быстро, 🔐 надежно и 🪙 удобно.\n\n❤️Получите бонус уже сейчас!\n🔓 Промокод: GYMKASSA\n❤️ (До 35 000 сом на ваш счет!)\n\n😀 Почему выбирают нас?\n😀 Моментальные операции – без ожиданий.\n🛡Надежность – ваши средства под защитой.\n📞 Поддержка 24/7 – всегда на связи.\n👌 Удобство – простой и понятный сервис.\n\n💡Как получить бонус?\n⚡️ Зарегистрируйтесь на платформе.\n⚡️ Введите промокод GYMKASSA\n⚡️ Заберите свой бонус и начните зарабатывать!\n\n✉️ Есть вопросы? Пишите нам: @igrokweb\n❤️Бот: @GymKassa_KGbot\n💛 С нами легко,выгодно и безопасно! Присоединяйтесь!" 
-        for user in users:
+        for user, _ in users:
             try:
                 await context.bot.send_message(chat_id=user, text=text)
             except Exception as e:
@@ -367,7 +367,6 @@ class Idle():
             ['Кошельки', 'Букмекеры'],
             ['Заблокированные пользователи'],
             ['Изменить время рассылки'],
-            ['Вкл/Выкл Технические работы']
         ]
 
         markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
@@ -389,12 +388,6 @@ class Idle():
         elif user_response == 'Изменить время рассылки':
             adminInstance.state = Newsletter
             await Newsletter.start(update, context)
-        elif user_response == 'Вкл/Выкл Технические работы':
-            await adminInstance.technicalJobOnOff()
-            if adminInstance.technical_jobs == True:
-                await update.message.reply_text('Технические работы были ВКЛЮЧЕНЫ.')
-            else:
-                await update.message.reply_text('Технические работы были ВЫКЛЮЧЕНЫ.') 
         else:
             await invalid_reply(update, context)
 
@@ -484,19 +477,18 @@ class WithdrawAccept():
     
         query = update.callback_query
         message = query.message.text
-        
+        done = False
+
         if user_response == 'accept':
             await self._accept_message(update, context)
             await query.edit_message_text(text=message + "\n\nПринято")
-            if adminInstance.technical_jobs == True:
-                await context.bot.edit_message_caption(chat_id=TECHNICIAN_ID, message_id=technicianInstance.messages[self.chat.id].id , caption="Chat id {}: {} request DONE".format(self.chat.id, self.__class__.__name__) )
             await self.finish(update, context)
+            done = True
         elif user_response == 'decline':
             await self._decline_message(update, context)
             await query.edit_message_text(text=message + "\n\nОтклонено")
-            if adminInstance.technical_jobs == True:
-                await context.bot.edit_message_caption(chat_id=TECHNICIAN_ID, message_id=technicianInstance.messages[self.chat.id].id , caption="Chat id {}: {} request DONE".format(self.chat.id, self.__class__.__name__) )
             await self.finish(update, context)
+            done = True
         elif user_response == 'block':
             user = {
                 'name': self.chat.first_name,
@@ -508,13 +500,16 @@ class WithdrawAccept():
                 await saveBlockedUsersDB()
                 await query.edit_message_text(text=message + "\n\nЗаблокировано")
                 await self._block_message(update, context)
-                if adminInstance.technical_jobs == True:
-                    await context.bot.edit_message_caption(chat_id=TECHNICIAN_ID, message_id=technicianInstance.messages[self.chat.id].id , caption="Chat id {}: {} request DONE".format(self.chat.id, self.__class__.__name__) )
                 await self.finish(update, context)
+                done = True
             except:
                 await update.message.reply_text('Ошибка при блокировке, повторите.')
         else:
             await invalid_reply(update, context)
+
+        if done and adminInstance.technical_jobs:
+            await technicianInstance.editMessage(context, self.chat.id, self.chat.__class__.__name__)
+            return 
 
     async def _accept_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         text = '✅ Вывод выполнен\n💸 Выведено: {} KGS\n🆔 Счет: {}'.format(self.withdraw.money, self.withdraw.bookmakerId)
@@ -586,19 +581,18 @@ class DepositAccept():
         
         query = update.callback_query
         message = query.message.caption
+        done = False
 
         if user_response == 'accept':
             await self._accept_message(update, context)
             await query.edit_message_caption(caption=message + '\n\nПринято')
-            if adminInstance.technical_jobs == True:
-                await context.bot.edit_message_caption(chat_id=TECHNICIAN_ID, message_id=technicianInstance.messages[self.chat.id].id , caption="Chat id {}: {} request DONE".format(self.chat.id, self.__class__.__name__) )
             await self.finish(update, context)
+            done = True
         elif user_response == 'decline':
             await self._decline_message(update, context)
             await query.edit_message_caption(caption=message + '\n\nОтклонено')
-            if adminInstance.technical_jobs == True:
-                await context.bot.edit_message_caption(chat_id=TECHNICIAN_ID, message_id=technicianInstance.messages[self.chat.id].id , caption="Chat id {}: {} request DONE".format(self.chat.id, self.__class__.__name__) )
             await self.finish(update, context)
+            done = True
         elif user_response == 'block':
             user = {
                 'name': self.chat.first_name,
@@ -610,13 +604,15 @@ class DepositAccept():
                 await saveBlockedUsersDB()
                 await query.edit_message_caption(caption=message + '\n\nЗаблокировано')
                 await self._block_message(update, context)
-                if adminInstance.technical_jobs == True:
-                    await context.bot.edit_message_caption(chat_id=TECHNICIAN_ID, message_id=technicianInstance.messages[self.chat.id].id , caption="Chat id {}: {} request DONE".format(self.chat.id, self.__class__.__name__) )
                 await self.finish(update, context)
+                done = True
             except:
                 await update.message.reply_text('Ошибка при блокировке, повторите.')
         else:
             await invalid_reply(update, context)
+
+        if done and adminInstance.technical_jobs:
+            await technicianInstance.editMessage(context, self.chat.id, self.__class__.__name__)
 
     async def _accept_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         text = '✅ Депозит выполнен\n💸 Ваш счет пополнен: {} KGS\n🆔 Счет: {}'.format(self.deposit.money, self.deposit.bookmakerId)
@@ -681,7 +677,7 @@ class Admin:
         for key, value in self.requests.items():
             if value.shown_to_admin == False:
                 await value.start(update, context)
-                
+                 
                 if self.technical_jobs == True:
                     message = await context.bot.send_message(chat_id=TECHNICIAN_ID, text="Chat id {}: {} request".format(value.chat.id, value.__class__.__name__))
                     technicianInstance.messages[key] = message                                                            
@@ -695,7 +691,7 @@ adminInstance = Admin()
 
 
 class Technician:
-    messages: Dict[int, Message]
+    messages: Dict[int, Message] = {}
 
     _instance = None  # Class variable to store the instance
     
@@ -703,5 +699,8 @@ class Technician:
         if not cls._instance:
             cls._instance = super().__new__(cls)
         return cls._instance
+
+    async def editMessage(self, context: CallbackContext, chatId: int, nameClass: str):
+        await context.bot.edit_message_text(chat_id=TECHNICIAN_ID, message_id=technicianInstance.messages[chatId].id , text="Chat id {}: {} request DONE".format(chatId, nameClass))
 
 technicianInstance = Technician()
