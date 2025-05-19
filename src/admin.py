@@ -58,7 +58,7 @@ async def callbackWithdraw(update: Update, context: ContextTypes.DEFAULT_TYPE, n
     adminInstance.requests[chat_id] = state
     if adminInstance.local_state == None:
         await adminInstance.runRequests(update, context)
-        return True
+    return True
 
 async def callbackDeposit(update: Update, context: ContextTypes.DEFAULT_TYPE, newDeposit: DepositProcess) -> bool:
     chat_id = update.message.chat.id
@@ -71,7 +71,7 @@ async def callbackDeposit(update: Update, context: ContextTypes.DEFAULT_TYPE, ne
     adminInstance.requests[chat_id] = state
     if adminInstance.local_state == None:
         await adminInstance.runRequests(update, context)
-        return True 
+    return True 
 
 def loadBlockedUsers():
     try:
@@ -354,7 +354,7 @@ class Newsletter():
         #make newsletter
         users = loadAgreedUsers()
         text = "⚜️Пополнение – АКТИВНО ✅\n⚜️ Вывод средств – АКТИВЕН ✅\n⚡️ Наш сервис работает 24/7! ⚡️ Быстро, 🔐 надежно и 🪙 удобно.\n\n❤️Получите бонус уже сейчас!\n🔓 Промокод: GYMKASSA\n❤️ (До 35 000 сом на ваш счет!)\n\n😀 Почему выбирают нас?\n😀 Моментальные операции – без ожиданий.\n🛡Надежность – ваши средства под защитой.\n📞 Поддержка 24/7 – всегда на связи.\n👌 Удобство – простой и понятный сервис.\n\n💡Как получить бонус?\n⚡️ Зарегистрируйтесь на платформе.\n⚡️ Введите промокод GYMKASSA\n⚡️ Заберите свой бонус и начните зарабатывать!\n\n✉️ Есть вопросы? Пишите нам: @igrokweb\n❤️Бот: @GymKassa_KGbot\n💛 С нами легко,выгодно и безопасно! Присоединяйтесь!" 
-        for user, _ in users:
+        for user, _ in users.items():
             try:
                 await context.bot.send_message(chat_id=user, text=text)
             except Exception as e:
