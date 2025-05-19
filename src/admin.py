@@ -352,13 +352,14 @@ class Newsletter():
     async def notifications(context: ContextTypes.DEFAULT_TYPE) -> None:
         #get chat ids 
         #make newsletter
-        users = loadAgreedUsers()
-        text = "⚜️Пополнение – АКТИВНО ✅\n⚜️ Вывод средств – АКТИВЕН ✅\n⚡️ Наш сервис работает 24/7! ⚡️ Быстро, 🔐 надежно и 🪙 удобно.\n\n❤️Получите бонус уже сейчас!\n🔓 Промокод: GYMKASSA\n❤️ (До 35 000 сом на ваш счет!)\n\n😀 Почему выбирают нас?\n😀 Моментальные операции – без ожиданий.\n🛡Надежность – ваши средства под защитой.\n📞 Поддержка 24/7 – всегда на связи.\n👌 Удобство – простой и понятный сервис.\n\n💡Как получить бонус?\n⚡️ Зарегистрируйтесь на платформе.\n⚡️ Введите промокод GYMKASSA\n⚡️ Заберите свой бонус и начните зарабатывать!\n\n✉️ Есть вопросы? Пишите нам: @igrokweb\n❤️Бот: @GymKassa_KGbot\n💛 С нами легко,выгодно и безопасно! Присоединяйтесь!" 
-        for user, _ in users.items():
-            try:
-                await context.bot.send_message(chat_id=user, text=text)
-            except Exception as e:
-                print("Notifications, chat not found.")
+        if not adminInstance.technical_jobs:
+            users = loadAgreedUsers()
+            text = "⚜️Пополнение – АКТИВНО ✅\n⚜️ Вывод средств – АКТИВЕН ✅\n⚡️ Наш сервис работает 24/7! ⚡️ Быстро, 🔐 надежно и 🪙 удобно.\n\n❤️Получите бонус уже сейчас!\n🔓 Промокод: GYMKASSA\n❤️ (До 35 000 сом на ваш счет!)\n\n😀 Почему выбирают нас?\n😀 Моментальные операции – без ожиданий.\n🛡Надежность – ваши средства под защитой.\n📞 Поддержка 24/7 – всегда на связи.\n👌 Удобство – простой и понятный сервис.\n\n💡Как получить бонус?\n⚡️ Зарегистрируйтесь на платформе.\n⚡️ Введите промокод GYMKASSA\n⚡️ Заберите свой бонус и начните зарабатывать!\n\n✉️ Есть вопросы? Пишите нам: @igrokweb\n❤️Бот: @GymKassa_KGbot\n💛 С нами легко,выгодно и безопасно! Присоединяйтесь!" 
+            for user, _ in users.items():
+                try:
+                    await context.bot.send_message(chat_id=user, text=text)
+                except Exception as e:
+                    print("Notifications, chat not found.")
 
 class Idle():
     @staticmethod
@@ -367,6 +368,7 @@ class Idle():
             ['Кошельки', 'Букмекеры'],
             ['Заблокированные пользователи'],
             ['Изменить время рассылки'],
+            ['Вкл/Выкл Технические работы']
         ]
 
         markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
@@ -388,6 +390,13 @@ class Idle():
         elif user_response == 'Изменить время рассылки':
             adminInstance.state = Newsletter
             await Newsletter.start(update, context)
+        elif user_response == 'Вкл/Выкл Технические работы':
+            await adminInstance.technicalJobOnOff()
+            await technicianInstance.afterTechnicalButtonFromAdmin(update, context)
+            if adminInstance.technical_jobs == True:
+                await update.message.reply_text('Технические работы были ВКЛЮЧЕНЫ.')
+            else:
+                await update.message.reply_text('Технические работы были ВЫКЛЮЧЕНЫ.') 
         else:
             await invalid_reply(update, context)
 
@@ -699,6 +708,36 @@ class Technician:
         if not cls._instance:
             cls._instance = super().__new__(cls)
         return cls._instance
+
+    async def afterTechnicalButtonFromAdmin(self, update, context: ContextTypes.DEFAULT_TYPE):
+        if admin.adminInstance.technical_jobs == True:
+            await context.bot.send_message(chat_id=TECHNICIAN_ID, text="Технические работы были включены со стороны Админа")
+            
+            await context.bot.send_message(chat_id=TECHNICIAN_ID, text="Ongoing requests:")
+            for key, value in admin.adminInstance.requests.items(): 
+                requestName = value.__class__.__name__
+                message = await context.bot.send_message(chat_id=TECHNICIAN_ID, text="Chat id {}: {} request".format(key, requestName))
+                admin.technicianInstance.messages[key] = message
+
+        else:
+            await context.bot.send_message(chat_id=TECHNICIAN_ID, text="Технические работы были отключены со стороны Админа")
+
+    async def afterTechnicalButton(self, update, context: ContextTypes.DEFAULT_TYPE):
+        if admin.adminInstance.technical_jobs == True:
+            await update.message.reply_text('Технические работы включены')
+            #notify Admin about techincal jobs
+            await context.bot.send_message(chat_id=ADMIN_ID, text="Технические работы были ВКЛЮЧЕНЫ со стороны специалиста")
+            
+
+            await update.message.reply_text('Ongoing requests:')
+            for key, value in admin.adminInstance.requests.items(): 
+                requestName = value.__class__.__name__
+                message = await update.message.reply_text("Chat id {}: {} request".format(key, requestName))
+                admin.technicianInstance.messages[key] = message
+
+        else:
+            await update.message.reply_text('Технические работы отключены')
+            await context.bot.send_message(chat_id=ADMIN_ID, text="Технические работы были ОТКЛЮЧЕНЫ со стороны специалиста")
 
     async def editMessage(self, context: CallbackContext, chatId: int, nameClass: str):
         await context.bot.edit_message_text(chat_id=TECHNICIAN_ID, message_id=technicianInstance.messages[chatId].id , text="Chat id {}: {} request DONE".format(chatId, nameClass))

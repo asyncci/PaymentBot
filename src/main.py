@@ -59,22 +59,12 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 async def button_handler(update: Update, context: CallbackContext) -> None:
     await admin.button_handler(update, context)
 
-async def technical_jobs(update: Update, context: CallbackContext) -> None:
+async def technical_jobs(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     userId = update.message.chat.id
     if userId == TECHNICIAN_ID:
         await admin.adminInstance.technicalJobOnOff()
-        
-        if admin.adminInstance.technical_jobs == True:
-            await update.message.reply_text('Технические работы включены')
-            
-            await update.message.reply_text('Ongoing requests:')
-            for key, value in admin.adminInstance.requests.items(): 
-                requestName = value.__class__.__name__
-                message = await update.message.reply_text("Chat id {}: {} request".format(key, requestName))
-                admin.technicianInstance.messages[key] = message
-
-        else:
-            await update.message.reply_text('Технические работы отключены')
+         
+        await admin.technicianInstance.afterTechnicalButton(update, context) 
         
 
 
