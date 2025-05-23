@@ -1,4 +1,4 @@
-import asyncio
+import pickle
 from collections.abc import Awaitable, Callable, Coroutine
 from datetime import datetime, timedelta
 from functools import update_wrapper
@@ -27,6 +27,23 @@ try:
 except:
     error('Admin ID not provided in .env.')
     quit()
+
+
+
+def saveRequests(requests):
+    data_bytes = pickle.dumps(requests)
+    with open("requests.pkl", "wb") as f:
+        f.write(data_bytes)
+
+def loadRequests():
+    try:
+        with open("requests.pkl", "rb") as f:
+            loaded_requests = pickle.load(f)
+            return loaded_requests
+    except:
+        return {}
+
+
 
 def escape_special_characters(text: str, special_characters: str) -> str:
     """
@@ -157,6 +174,14 @@ class UnblockProcess():
         try:
             await popBlockedUser(self.index)
             await saveBlockedUsersDB()
+            
+            reply = [
+                ['Пополнить', 'Вывести'],
+            ]
+
+            markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
+            await context.bot.send_message(self.id, text="Вы были разблокированы! Поздравляем, теперь вы можете снова пользоваться ботом.🎉", reply_markup=markup)
+      
             await update.message.reply_text('Пользователь {} был разблокирован.'.format(self.id))
         except:
             await update.message.reply_text('Ошибка при сохранении списка заблокированных пользователей!')
@@ -174,19 +199,24 @@ class BlockedUsers():
         markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
          
         text = 'Список заблокированных пользователей:\n'
-
-        blockedUsers = await getBlockedUsers()
-        index = 1
-        for i in blockedUsers:
-            show = None
-            if i['username'] != None:
-                show = '@'+i['username']
-            else:
-                show = i['name']
-
-            text += str(index)+'.'+str(show)+" id="+str(i['id']) +'\n'
-
         await update.message.reply_text(text=text, reply_markup=markup)
+
+        text = ''
+        blockedUsers = await getBlockedUsers()
+        index = 0
+        for user in blockedUsers:
+            show = None
+            if user['username'] != None:
+                show = '@'+user['username']
+            else:
+                show = user['name']
+            
+            index += 1
+            text += str(index)+'.'+str(show)+" id="+str(user['id']) +'\n'
+            
+            if len(text) > 2096:
+                await update.message.reply_text(text=text, reply_markup=markup)
+                text = ''
         pass
 
     @staticmethod
@@ -214,6 +244,7 @@ class BlockedUsers():
                 await local_state.finalize(update, context)
                 adminInstance.local_state = None
                 await adminInstance.finishedState(update, context)
+
 class SetTimer(): 
     @staticmethod
     def is_valid_time(time_string):
@@ -490,7 +521,6 @@ class WithdrawAccept():
 
         if user_response == 'accept':
             await self._accept_message(update, context)
-            await query.edit_message_text(text=message + "\n\nПринято")
             await self.finish(update, context)
             done = True
         elif user_response == 'decline':
@@ -499,6 +529,20 @@ class WithdrawAccept():
             await self.finish(update, context)
             done = True
         elif user_response == 'block':
+            reply = [
+                [
+                     InlineKeyboardButton('Принять', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'accept'})), 
+                     InlineKeyboardButton('Отклонить', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'decline'}))
+                ],
+                [ 
+                     InlineKeyboardButton('Да', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'blockSure'})),
+                     InlineKeyboardButton('Нет', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'noBlockSure'}))
+                ]
+            ]
+
+            markup = InlineKeyboardMarkup(reply)
+            await query.edit_message_reply_markup(reply_markup=markup)
+        elif user_response == 'blockSure':
             user = {
                 'name': self.chat.first_name,
                 'username': self.chat.username,
@@ -507,14 +551,30 @@ class WithdrawAccept():
             try:
                 await addBlockedUser(user)
                 await saveBlockedUsersDB()
-                await query.edit_message_text(text=message + "\n\nЗаблокировано")
+                await query.edit_message_text(text=message + '\n\nЗаблокировано')
                 await self._block_message(update, context)
                 await self.finish(update, context)
                 done = True
             except:
                 await update.message.reply_text('Ошибка при блокировке, повторите.')
+        elif user_response == "noBlockSure":
+            reply = [
+                [
+                     InlineKeyboardButton('Принять', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'accept'})), 
+                     InlineKeyboardButton('Отклонить', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'decline'}))
+                ],
+                [ 
+                     InlineKeyboardButton('Заблокировать', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'block'})),
+                ]
+            ]
+
+            markup = InlineKeyboardMarkup(reply)
+            await query.edit_message_reply_markup(reply_markup=markup)
         else:
             await invalid_reply(update, context)
+
+        if done and adminInstance.technical_jobs:
+            await technicianInstance.editMessage(context, self.chat.id, self.__class__.__name__)
 
         if done and adminInstance.technical_jobs:
             await technicianInstance.editMessage(context, self.chat.id, self.chat.__class__.__name__)
@@ -603,6 +663,20 @@ class DepositAccept():
             await self.finish(update, context)
             done = True
         elif user_response == 'block':
+            reply = [
+                [
+                     InlineKeyboardButton('Принять', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'accept'})), 
+                     InlineKeyboardButton('Отклонить', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'decline'}))
+                ],
+                [ 
+                     InlineKeyboardButton('Да', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'blockSure'})),
+                     InlineKeyboardButton('Нет', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'noBlockSure'}))
+                ]
+            ]
+
+            markup = InlineKeyboardMarkup(reply)
+            await query.edit_message_reply_markup(reply_markup=markup)
+        elif user_response == 'blockSure':
             user = {
                 'name': self.chat.first_name,
                 'username': self.chat.username,
@@ -617,6 +691,19 @@ class DepositAccept():
                 done = True
             except:
                 await update.message.reply_text('Ошибка при блокировке, повторите.')
+        elif user_response == "noBlockSure":
+            reply = [
+                [
+                     InlineKeyboardButton('Принять', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'accept'})), 
+                     InlineKeyboardButton('Отклонить', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'decline'}))
+                ],
+                [ 
+                     InlineKeyboardButton('Заблокировать', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'block'})),
+                ]
+            ]
+
+            markup = InlineKeyboardMarkup(reply)
+            await query.edit_message_reply_markup(reply_markup=markup)
         else:
             await invalid_reply(update, context)
 
@@ -634,7 +721,6 @@ class DepositAccept():
     async def _block_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         text = 'Вы были заблокированы.⛔️\nЕсли у вас остались вопросы, напишите ' + '@' + adminInstance.username
         await context.bot.send_message(chat_id=self.chat.id, text=text, reply_markup=ReplyKeyboardRemove())
-
 
 
 class Admin:
@@ -661,6 +747,8 @@ class Admin:
             technical_jobs = adminSettings['technical_jobs']
         except:
             technical_jobs = "false"
+
+        self.requests = loadRequests()
 
         if technical_jobs == "true":
             self.technical_jobs = True
@@ -743,3 +831,5 @@ class Technician:
         await context.bot.edit_message_text(chat_id=TECHNICIAN_ID, message_id=technicianInstance.messages[chatId].id , text="Chat id {}: {} request DONE".format(chatId, nameClass))
 
 technicianInstance = Technician()
+
+

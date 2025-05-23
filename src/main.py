@@ -1,6 +1,7 @@
+import signal, sys
 from logging import error 
 from os import getenv
-from typing import Dict, List
+from typing import Dict, List, final
 from dotenv import load_dotenv
 from telegram.ext import CallbackContext, CallbackQueryHandler, CommandHandler, ContextTypes, JobQueue, MessageHandler, filters
 from telegram import Message, MessageAutoDeleteTimerChanged, Update
@@ -67,19 +68,32 @@ async def technical_jobs(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await admin.technicianInstance.afterTechnicalButton(update, context) 
         
 
+def handle_exit(signum, frame):
+    print(f"Received signal {signum}, saving requests...")
+    
+    admin.saveRequests(admin.adminInstance.requests)
+
+    sys.exit(0)
 
 def main() -> None:
-    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                        level=logging.INFO)
+    try:
+        logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                            level=logging.INFO)
 
-    app.add_handler(CommandHandler('start', start));
-    app.add_handler(CommandHandler('technical_jobs', technical_jobs));
-    app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, handle_reply))
-    app.add_handler(CallbackQueryHandler(button_handler))
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
-    
+        app.add_handler(CommandHandler('start', start));
+        app.add_handler(CommandHandler('technical_jobs', technical_jobs));
+        app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, handle_reply))
+        app.add_handler(CallbackQueryHandler(button_handler))
+        app.run_polling(allowed_updates=Update.ALL_TYPES)
+    except:
+        handle_exit(None, None)
+    finally:
+        handle_exit(None, None)
+
+
 if __name__ == "__main__":
     main()
+
 
 #remember
 #id
