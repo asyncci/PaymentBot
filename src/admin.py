@@ -217,6 +217,8 @@ class BlockedUsers():
             if len(text) > 2096:
                 await update.message.reply_text(text=text, reply_markup=markup)
                 text = ''
+        
+        await update.message.reply_text(text=text, reply_markup=markup)
         pass
 
     @staticmethod
@@ -521,6 +523,7 @@ class WithdrawAccept():
 
         if user_response == 'accept':
             await self._accept_message(update, context)
+            await query.edit_message_text(text=message + "\n\nПринято")
             await self.finish(update, context)
             done = True
         elif user_response == 'decline':
