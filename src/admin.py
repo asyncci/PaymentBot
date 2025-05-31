@@ -524,18 +524,18 @@ class WithdrawAccept():
                 payout = await cashdesk_api.api.payout(int(self.withdraw.bookmakerId), code=self.withdraw.code)
                 
                 if (payout['Success'] == False):
-                    await query.editMessage(text=message + '\n\nВывод невозможен\n\n{}'.format(self.chat.id,payout['Message']))
+                    await query.edit_message_text(text=message + '\n\nВывод невозможен\n\n{}'.format(self.chat.id,payout['Message']))
                     return False
                 else:
-                    await query.editMessage(text=message + '\n\nПроизведен ✅\nСумма: {}'.format(self.chat.id, payout['Summa']))
+                    await query.edit_message_text(text=message + '\n\nПроизведен ✅\nСумма: {}'.format(self.chat.id, payout['Summa']))
                     return True
             except: 
-                await query.editMessage(text=message + '\n\nВывод невозможен.\nОшибка'.format(self.chat.id))
+                await query.edit_message_text(text=message + '\n\nВывод невозможен.\nОшибка'.format(self.chat.id))
 
             return False
         else:
             #TODO
-            await query.editMessage(text=message + '\n\nВывод невозможен, недостаточный баланс или превышен лимит.\n\nБаланс: {}\nЛимит: {}'.format(self.chat.id, myBalance['Balance'], myBalance['Limit']))
+            await query.edit_message_text(ttext=message + '\n\nВывод невозможен, недостаточный баланс или превышен лимит.\n\nБаланс: {}\nЛимит: {}'.format(self.chat.id, myBalance['Balance'], myBalance['Limit']))
             return False
 
     async def button_handler(self, user_response: str, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: 
