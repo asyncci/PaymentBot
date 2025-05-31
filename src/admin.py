@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 from dotenv import load_dotenv
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Message, ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram._utils.argumentparsing import parse_lpo_and_dwpp
+import cashdesk_api
 from client import DepositProcess, WithdrawProcess, admin, getAgreedUsers, loadAgreedUsers
 from main import TECHNICIAN_ID, technical_jobs
 from wallets import Wallets
@@ -515,6 +516,28 @@ class WithdrawAccept():
         #adminInstance.last_state = None
         #await adminInstance.state.start(update, context)
 
+    async def _accept(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+        myBalance = await cashdesk_api.api.get_balance()
+
+        if (self.withdraw.money <= myBalance['Limit'] and self.withdraw.money <= myBalance['Balance']): 
+            try:
+                payout = await cashdesk_api.api.payout(int(self.withdraw.bookmakerId), code=self.withdraw.code)
+                
+                if (payout['Success'] == False):
+                    await context.bot.send_message(chat_id=ADMIN_ID,text='Вывод: {}\n\nВывод невозможен\n\n{}'.format(self.chat.id,payout['Message']))
+                    return False
+                else:
+                    await context.bot.send_message(chat_id=ADMIN_ID,text='Вывод: {}\n\nПроизведено ✅\nСумма: {}'.format(self.chat.id, payout['Summa']))
+                    return True
+            except: 
+                await context.bot.send_message(chat_id=ADMIN_ID,text='Вывод: {}\n\nВывод невозможен.\nОшибка'.format(self.chat.id))
+
+            return False
+        else:
+            #TODO
+            await context.bot.send_message(chat_id=ADMIN_ID,text='Вывод: {}\n\nВывод невозможен, недостаточный баланс или превышен лимит.\n\nБаланс: {}\nЛимит: {}'.format(self.chat.id, myBalance['Balance'], myBalance['Limit']))
+            return False
+
     async def button_handler(self, user_response: str, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: 
     
         query = update.callback_query
@@ -522,24 +545,45 @@ class WithdrawAccept():
         done = False
 
         if user_response == 'accept':
-            await self._accept_message(update, context)
-            await query.edit_message_text(text=message + "\n\nПринято")
-            await self.finish(update, context)
-            done = True
+            reply = [
+                [ 
+                     InlineKeyboardButton('Да, Принять', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'acceptSure'})),
+                     InlineKeyboardButton('Назад', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'back'}))
+                ]
+            ]
+
+            markup = InlineKeyboardMarkup(reply)
+            await query.edit_message_reply_markup(reply_markup=markup)
+        elif user_response == 'acceptSure':
+            accepted = await self._accept(update, context)
+            if (accepted):
+                await self._accept_message(update, context)
+                await query.edit_message_text(text=message + "\n\nПринято")
+                await self.finish(update, context)
+                done = True
+            else:
+                await self.__default_inline(query)
+
         elif user_response == 'decline':
+            reply = [
+                [ 
+                     InlineKeyboardButton('Да, Отклонить', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'declineSure'})),
+                     InlineKeyboardButton('Назад', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'back'}))
+                ]
+            ]
+
+            markup = InlineKeyboardMarkup(reply)
+            await query.edit_message_reply_markup(reply_markup=markup)
+        elif user_response == 'declineSure':
             await self._decline_message(update, context)
             await query.edit_message_text(text=message + "\n\nОтклонено")
             await self.finish(update, context)
             done = True
         elif user_response == 'block':
             reply = [
-                [
-                     InlineKeyboardButton('Принять', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'accept'})), 
-                     InlineKeyboardButton('Отклонить', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'decline'}))
-                ],
                 [ 
-                     InlineKeyboardButton('Да', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'blockSure'})),
-                     InlineKeyboardButton('Нет', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'noBlockSure'}))
+                     InlineKeyboardButton('Да, Заблокировать', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'blockSure'})),
+                     InlineKeyboardButton('Назад', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'back'}))
                 ]
             ]
 
@@ -560,19 +604,8 @@ class WithdrawAccept():
                 done = True
             except:
                 await update.message.reply_text('Ошибка при блокировке, повторите.')
-        elif user_response == "noBlockSure":
-            reply = [
-                [
-                     InlineKeyboardButton('Принять', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'accept'})), 
-                     InlineKeyboardButton('Отклонить', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'decline'}))
-                ],
-                [ 
-                     InlineKeyboardButton('Заблокировать', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'block'})),
-                ]
-            ]
-
-            markup = InlineKeyboardMarkup(reply)
-            await query.edit_message_reply_markup(reply_markup=markup)
+        elif user_response == "back":
+            await self.__default_inline(query)
         else:
             await invalid_reply(update, context)
 
@@ -594,7 +627,20 @@ class WithdrawAccept():
     async def _block_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         text = 'Вы были заблокированы.⛔️\nЕсли у вас остались вопросы, напишите ' + '@' + adminInstance.username
         await context.bot.send_message(chat_id=self.chat.id, text=text, reply_markup=ReplyKeyboardRemove())
+    
+    async def __default_inline(self, query):
+        reply = [
+            [
+                 InlineKeyboardButton('Принять', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'accept'})), 
+                 InlineKeyboardButton('Отклонить', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'decline'}))
+            ],
+            [ 
+                 InlineKeyboardButton('Заблокировать', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'block'})),
+            ]
+        ]
 
+        markup = InlineKeyboardMarkup(reply)
+        await query.edit_message_reply_markup(reply_markup=markup)
 
 class DepositAccept(): 
     def __init__(self, newDeposit: DepositProcess, previous_state: Optional[Any], update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -627,7 +673,7 @@ class DepositAccept():
         markup = InlineKeyboardMarkup(reply)
         
         names = " ".join(self.deposit.clientName)
-        text = "ПОПОЛНЕНИЕ от пользователя: {}\n\nБукмекер: {}\nПополнение по: {}\nФИО: {}\nId на сайте: `{}`\nСумма: `{}`".format(username, deposit.bookmaker, deposit.wallet['name'], names, deposit.bookmakerId, deposit.money)
+        text = "{}\n\nПОПОЛНЕНИЕ от пользователя: {}\n\nБукмекер: {}\nПополнение по: {}\nФИО: {}\nId на сайте: `{}`\nСумма: `{}`".format(self.chat.id,username, deposit.bookmaker, deposit.wallet['name'], names, deposit.bookmakerId, deposit.money)
         photo = deposit.photo
          
         special_chars = r"_*[]()~>#+-=|{}.!\\"
@@ -649,6 +695,30 @@ class DepositAccept():
         #adminInstance.last_state = None
         #await adminInstance.state.start(update, context)
 
+    async def _accept(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+        myBalance = await cashdesk_api.api.get_balance()
+
+        if (self.deposit.money <= myBalance['Limit'] and self.deposit.money <= myBalance['Balance']): 
+            try:
+                deposit = await cashdesk_api.api.deposit(int(self.deposit.bookmakerId), self.deposit.money)
+                
+                if (deposit['Success'] == False):
+                    await context.bot.send_message(chat_id=ADMIN_ID,text='Пополнение: {}\n\nПополнение невозможно\n\n{}'.format(self.chat.id,deposit['Message']))
+                    return False
+                else:
+                    await context.bot.send_message(chat_id=ADMIN_ID,text='Пополнение: {}\n\nПроизведено ✅\nСумма: {}'.format(self.chat.id, deposit['Summa']))
+                    return True
+                    
+            except: 
+                await context.bot.send_message(chat_id=ADMIN_ID,text='Пополнение: {}\n\nПополнение невозможно.\nОшибка'.format(self.chat.id))
+
+            return False
+        else:
+            #TODO
+            await context.bot.send_message(chat_id=ADMIN_ID,text='Пополнение: {}\n\nПополнение невозможно, недостаточный баланс или превышен лимит.\n\nБаланс: {}\nЛимит: {}'.format(self.chat.id, myBalance['Balance'], myBalance['Limit']))
+            return False
+
+
     async def button_handler(self, user_response: str, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: 
         
         query = update.callback_query
@@ -656,24 +726,46 @@ class DepositAccept():
         done = False
 
         if user_response == 'accept':
-            await self._accept_message(update, context)
-            await query.edit_message_caption(caption=message + '\n\nПринято')
-            await self.finish(update, context)
-            done = True
+            reply = [
+                [
+                     InlineKeyboardButton('Да, Принять', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'acceptSure'})), 
+                     InlineKeyboardButton('Назад', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'back'}))
+                ],
+            ]
+
+            markup = InlineKeyboardMarkup(reply)
+            await query.edit_message_reply_markup(reply_markup=markup)
+        elif user_response == 'acceptSure':
+            accepted = await self._accept(update, context)
+            
+            if (accepted):
+                await self._accept_message(update, context)
+                await query.edit_message_caption(caption=message + '\n\nПринято')
+                await self.finish(update, context)
+                done = True
+            else:
+                await self.__default_inline(query)
+
         elif user_response == 'decline':
+            reply = [
+                [
+                     InlineKeyboardButton('Да, Отклонить', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'declineSure'})),
+                     InlineKeyboardButton('Назад', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'back'}))
+                ],
+            ]
+
+            markup = InlineKeyboardMarkup(reply)
+            await query.edit_message_reply_markup(reply_markup=markup)
+        elif user_response == 'declineSure':
             await self._decline_message(update, context)
             await query.edit_message_caption(caption=message + '\n\nОтклонено')
             await self.finish(update, context)
             done = True
         elif user_response == 'block':
             reply = [
-                [
-                     InlineKeyboardButton('Принять', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'accept'})), 
-                     InlineKeyboardButton('Отклонить', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'decline'}))
-                ],
                 [ 
-                     InlineKeyboardButton('Да', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'blockSure'})),
-                     InlineKeyboardButton('Нет', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'noBlockSure'}))
+                     InlineKeyboardButton('Да, Заблокировать', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'blockSure'})),
+                     InlineKeyboardButton('Назад', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'back'}))
                 ]
             ]
 
@@ -694,19 +786,8 @@ class DepositAccept():
                 done = True
             except:
                 await update.message.reply_text('Ошибка при блокировке, повторите.')
-        elif user_response == "noBlockSure":
-            reply = [
-                [
-                     InlineKeyboardButton('Принять', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'accept'})), 
-                     InlineKeyboardButton('Отклонить', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'decline'}))
-                ],
-                [ 
-                     InlineKeyboardButton('Заблокировать', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'block'})),
-                ]
-            ]
-
-            markup = InlineKeyboardMarkup(reply)
-            await query.edit_message_reply_markup(reply_markup=markup)
+        elif user_response == "back":
+            await self.__default_inline(query)
         else:
             await invalid_reply(update, context)
 
@@ -724,6 +805,20 @@ class DepositAccept():
     async def _block_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         text = 'Вы были заблокированы.⛔️\nЕсли у вас остались вопросы, напишите ' + '@' + adminInstance.username
         await context.bot.send_message(chat_id=self.chat.id, text=text, reply_markup=ReplyKeyboardRemove())
+
+    async def __default_inline(self, query):
+        reply = [
+            [
+                 InlineKeyboardButton('Принять', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'accept'})), 
+                 InlineKeyboardButton('Отклонить', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'decline'}))
+            ],
+            [ 
+                 InlineKeyboardButton('Заблокировать', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'block'})),
+            ]
+        ]
+
+        markup = InlineKeyboardMarkup(reply)
+        await query.edit_message_reply_markup(reply_markup=markup)
 
 
 class Admin:

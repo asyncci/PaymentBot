@@ -3,12 +3,14 @@ from io import UnsupportedOperation
 import json
 import re
 from typing import Any, Tuple
+from typing_extensions import cast
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, MessageOriginHiddenUser, ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram._utils.types import ReplyMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler  
 
 from telegram.ext import CommandHandler, ContextTypes, MessageHandler, filters
 
+import cashdesk_api
 import admin, bookmakers, wallets
 import inspect
 
@@ -165,6 +167,17 @@ class WithdrawProcess():
                     await update.message.reply_text('Введите ID!')
                     return False
                 
+                #check for user existence at bookmaker database 
+                try:
+                    user = await cashdesk_api.api.get_user(int(newBookmakerId))
+
+                    if (user['UserId'] == 0):
+                        await update.message.reply_text('Пожалуйста убедитесь, что ввели корректный номер.')
+                        return False
+                except: 
+                    await update.message.reply_text('Пожалуйста убедитесь, что ввели корректный номер.')
+                    return False
+
                 self.bookmakerId = newBookmakerId
 
                 reply = [
@@ -367,7 +380,17 @@ class DepositProcess():
                 if isDigit == False:
                     await update.message.reply_text('Введите ID!')
                     return False
-                    
+                #check for user existence at bookmaker database 
+                try:
+                    user = await cashdesk_api.api.get_user(int(newBookmakerId))
+
+                    if (user['UserId'] == 0):
+                        await update.message.reply_text('Пожалуйста убедитесь, что ввели корректный номер.')
+                        return False
+                except: 
+                    await update.message.reply_text('Пожалуйста убедитесь, что ввели корректный номер.')
+                    return False
+
                 self.bookmakerId = newBookmakerId
                 self.step += 1
 
@@ -390,7 +413,7 @@ class DepositProcess():
                 except:
                     await update.message.reply_text('Введите сумму!')
                     return False
- 
+                #TODO
                 if money < 50 or money > 50000:
                     await update.message.reply_text('Введите разрешимую сумму!')
                     return False
