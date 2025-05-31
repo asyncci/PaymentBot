@@ -516,7 +516,7 @@ class WithdrawAccept():
         #adminInstance.last_state = None
         #await adminInstance.state.start(update, context)
 
-    async def _accept(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    async def _accept(self, query, message) -> bool:
         myBalance = await cashdesk_api.api.get_balance()
 
         if (self.withdraw.money <= myBalance['Limit'] and self.withdraw.money <= myBalance['Balance']): 
@@ -524,18 +524,18 @@ class WithdrawAccept():
                 payout = await cashdesk_api.api.payout(int(self.withdraw.bookmakerId), code=self.withdraw.code)
                 
                 if (payout['Success'] == False):
-                    await context.bot.send_message(chat_id=ADMIN_ID,text='Вывод: {}\n\nВывод невозможен\n\n{}'.format(self.chat.id,payout['Message']))
+                    await query.editMessage(text=message + '\n\nВывод невозможен\n\n{}'.format(self.chat.id,payout['Message']))
                     return False
                 else:
-                    await context.bot.send_message(chat_id=ADMIN_ID,text='Вывод: {}\n\nПроизведено ✅\nСумма: {}'.format(self.chat.id, payout['Summa']))
+                    await query.editMessage(text=message + '\n\nПроизведен ✅\nСумма: {}'.format(self.chat.id, payout['Summa']))
                     return True
             except: 
-                await context.bot.send_message(chat_id=ADMIN_ID,text='Вывод: {}\n\nВывод невозможен.\nОшибка'.format(self.chat.id))
+                await query.editMessage(text=message + '\n\nВывод невозможен.\nОшибка'.format(self.chat.id))
 
             return False
         else:
             #TODO
-            await context.bot.send_message(chat_id=ADMIN_ID,text='Вывод: {}\n\nВывод невозможен, недостаточный баланс или превышен лимит.\n\nБаланс: {}\nЛимит: {}'.format(self.chat.id, myBalance['Balance'], myBalance['Limit']))
+            await query.editMessage(text=message + '\n\nВывод невозможен, недостаточный баланс или превышен лимит.\n\nБаланс: {}\nЛимит: {}'.format(self.chat.id, myBalance['Balance'], myBalance['Limit']))
             return False
 
     async def button_handler(self, user_response: str, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: 
@@ -555,7 +555,7 @@ class WithdrawAccept():
             markup = InlineKeyboardMarkup(reply)
             await query.edit_message_reply_markup(reply_markup=markup)
         elif user_response == 'acceptSure':
-            accepted = await self._accept(update, context)
+            accepted = await self._accept(query, message)
             if (accepted):
                 await self._accept_message(update, context)
                 await query.edit_message_text(text=message + "\n\nПринято")
@@ -695,7 +695,7 @@ class DepositAccept():
         #adminInstance.last_state = None
         #await adminInstance.state.start(update, context)
 
-    async def _accept(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    async def _accept(self, query, message) -> bool:
         myBalance = await cashdesk_api.api.get_balance()
 
         if (self.deposit.money <= myBalance['Limit'] and self.deposit.money <= myBalance['Balance']): 
@@ -703,19 +703,19 @@ class DepositAccept():
                 deposit = await cashdesk_api.api.deposit(int(self.deposit.bookmakerId), self.deposit.money)
                 
                 if (deposit['Success'] == False):
-                    await context.bot.send_message(chat_id=ADMIN_ID,text='Пополнение: {}\n\nПополнение невозможно\n\n{}'.format(self.chat.id,deposit['Message']))
+                    await query.edit_message_caption(caption=message + '\n\nПополнение невозможно\n\n{}'.format(self.chat.id,deposit['Message']))
                     return False
                 else:
-                    await context.bot.send_message(chat_id=ADMIN_ID,text='Пополнение: {}\n\nПроизведено ✅\nСумма: {}'.format(self.chat.id, deposit['Summa']))
+                    await  query.edit_message_caption(caption=message + '\n\nПроизведено ✅\nСумма: {}'.format(self.chat.id, deposit['Summa']))
                     return True
                     
             except: 
-                await context.bot.send_message(chat_id=ADMIN_ID,text='Пополнение: {}\n\nПополнение невозможно.\nОшибка'.format(self.chat.id))
+                await query.edit_message_caption(caption=message + '\n\nПополнение невозможно.\nОшибка'.format(self.chat.id))
 
             return False
         else:
             #TODO
-            await context.bot.send_message(chat_id=ADMIN_ID,text='Пополнение: {}\n\nПополнение невозможно, недостаточный баланс или превышен лимит.\n\nБаланс: {}\nЛимит: {}'.format(self.chat.id, myBalance['Balance'], myBalance['Limit']))
+            await query.edit_message_caption(caption=message + '\n\nПополнение невозможно, недостаточный баланс или превышен лимит.\n\nБаланс: {}\nЛимит: {}'.format(self.chat.id, myBalance['Balance'], myBalance['Limit']))
             return False
 
 
@@ -736,7 +736,7 @@ class DepositAccept():
             markup = InlineKeyboardMarkup(reply)
             await query.edit_message_reply_markup(reply_markup=markup)
         elif user_response == 'acceptSure':
-            accepted = await self._accept(update, context)
+            accepted = await self._accept(query, message)
             
             if (accepted):
                 await self._accept_message(update, context)
