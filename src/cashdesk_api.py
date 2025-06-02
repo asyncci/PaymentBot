@@ -124,14 +124,14 @@ api = CashdeskAPI(
 )
 
 #balance = asyncio.run(api.get_balance())
-#user = asyncio.run(api.get_user(202929329))
+#user = asyncio.run(api.get_user(1275935265))
 #if "errorCode" in user:
 #    print(user['invalidFields'])
 #else:
 #    print(user)
 
 #deposit = asyncio.run(api.deposit(626363517, 1.0))
-#print(deposit)
+#print(user)
 
 
 #payout = asyncio.run(api.payout(626363517, code="sldap"))

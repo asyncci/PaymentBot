@@ -10,5 +10,6 @@ adminSettings.json
 agreedUsers.json
 blockedUsers.json
 wallets.json
+withdrawWallets.json
 bookmakers.json
 requests.pkl

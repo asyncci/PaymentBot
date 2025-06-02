@@ -11,7 +11,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler
 from telegram.ext import CommandHandler, ContextTypes, MessageHandler, filters
 
 import cashdesk_api
-import admin, bookmakers, wallets
+import admin, bookmakers, depositWallets, withdrawWallets
 import inspect
 
 
@@ -48,8 +48,20 @@ async def get_bookmakers() -> list[list[str]]:
 
     return batch
 
-async def get_wallets() -> list[list[str]]:
-    walletNames = await wallets.walletNames()
+async def get_deposit_wallets() -> list[list[str]]:
+    walletNames = await depositWallets.walletNames()
+    
+    batch = []
+    
+    i = 0
+    while i < len(walletNames):
+        batch.append(walletNames[i:i+2])
+        i += 2
+
+    return batch
+
+async def get_withdraw_wallets() -> list[list[str]]:
+    walletNames = await withdrawWallets.walletNames()
     
     batch = []
     
@@ -98,7 +110,7 @@ class WithdrawProcess():
 
                 self.step += 1
 
-                reply = await get_wallets()
+                reply = await get_withdraw_wallets()
                 reply.append(['Отмена'])
 
                 markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
@@ -106,13 +118,13 @@ class WithdrawProcess():
                 await update.message.reply_text('Выберите способ вывода👇', reply_markup=markup)
                 return False
             case 3:
-                if user_response not in await wallets.walletNames():
+                if user_response not in await withdrawWallets.walletNames():
                     await invalid_reply(update, context)
                     return False
 
                 self.step += 1
                 
-                walletsStack = await wallets.getWallets()
+                walletsStack = await withdrawWallets.getWallets()
             
                 for i in walletsStack:
                     if i['name'] == user_response:
@@ -295,7 +307,7 @@ class DepositProcess():
                 self.step += 1
                 self.bookmaker = user_response
 
-                reply = await get_wallets()
+                reply = await get_deposit_wallets()
                 reply.append(['Отмена'])
 
                 markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
@@ -428,6 +440,13 @@ class DepositProcess():
 
                 await update.message.reply_text(reciever_details.format(name, self.wallet['details'], money), parse_mode='MarkdownV2')
 
+
+                reply = [
+                    ['']
+                ]
+                await update.message.reply_text('ℹ️  ', reply_markup=) 
+                
+
                 reply = [
                     ['Отмена']
                 ]
@@ -436,6 +455,7 @@ class DepositProcess():
                 
                 self.step += 1
                 self.money = money
+
                 return False
             case _:
                 photo = update.message.photo
