@@ -528,7 +528,7 @@ class WithdrawAccept():
                 await query.edit_message_text(text=message + '\n\nВывод невозможен\n\n{}'.format(self.chat.id, payout['Message']))
                 return False
             else:
-                await query.edit_message_text(text=message + '\n\nПроизведен ✅\nСумма на стороне букмекера: {}'.format(self.chat.id, payout['Summa']))
+                await query.edit_message_text(text=message + '\n\nПроизведен ✅\nСумма на стороне букмекера: {}'.format(self.chat.id, payout))
                 return True
         except: 
             await query.edit_message_text(text=message + '\n\nВывод невозможен.\nОшибка')
@@ -572,6 +572,7 @@ class WithdrawAccept():
 
         elif user_response == 'notifyAcceptance': 
             await self._accept_message(update, context)
+            await query.edit_message_text(text=message + "\n\nОповещен")
             await self.finish(update, context)
             done = True
 
@@ -714,7 +715,7 @@ class DepositAccept():
                 await query.edit_message_caption(caption=message + '\n\nПополнение невозможно\n\n{}'.format(self.chat.id,deposit['Message']))
                 return False
             else:
-                await  query.edit_message_caption(caption=message + '\n\nПроизведено ✅\nСумма на стороне букмекера: {}'.format(self.chat.id, deposit['Summa']))
+                await  query.edit_message_caption(caption=message + '\n\nПроизведено ✅\nСумма на стороне букмекера: {}'.format(self.chat.id, deposit))
                 return True
                 
         except: 
@@ -759,7 +760,7 @@ class DepositAccept():
 
         elif user_response == 'notifyAcceptance':
             await self._accept_message(update, context)
-            await query.edit_message_caption(caption=message + '\n\nПринято')
+            await query.edit_message_caption(caption=message + '\n\nОповещен')
             await self.finish(update, context)
             done = True
         elif user_response == 'decline':
@@ -774,7 +775,6 @@ class DepositAccept():
             await query.edit_message_reply_markup(reply_markup=markup)
         elif user_response == 'declineSure':
             await self._decline_message(update, context)
-            await query.edit_message_caption(caption=message + '\n\nОтклонено')
             await self.finish(update, context)
             done = True
         elif user_response == 'block':
