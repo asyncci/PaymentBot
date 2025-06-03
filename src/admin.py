@@ -641,11 +641,11 @@ class WithdrawAccept():
         await context.bot.send_message(chat_id=self.chat.id, text=text)
 
     async def _decline_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        text = '⚠️ Вывод не выполнен\n⛔️ Вы ввели не верные данные для вывода\n🛟 Если у вас возникли какие то вопросы или проблемы пишите админстратору: ' + '@' + adminInstance.username
+        text = '⚠️ Вывод не выполнен\n⛔️ Вы ввели не верные данные для вывода\n🛟 Если у вас возникли какие то вопросы или проблемы пишите админстратору: ' + '@GymAdmin_01'
         await context.bot.send_message(chat_id=self.chat.id, text=text)
 
     async def _block_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        text = 'Вы были заблокированы.⛔️\nЕсли у вас остались вопросы, напишите ' + '@' + adminInstance.username
+        text = 'Вы были заблокированы.⛔️\nЕсли у вас остались вопросы, напишите ' + '@GymAdmin_01'
         await context.bot.send_message(chat_id=self.chat.id, text=text, reply_markup=ReplyKeyboardRemove())
     
     async def __default_inline(self, query):
@@ -817,11 +817,11 @@ class DepositAccept():
         await context.bot.send_message(chat_id=self.chat.id, text=text)
 
     async def _decline_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        text = 'Депозит не выполнен\n⛔️ Уведомляем за использование поддельного или фальшивого чека, вы подвергаете себя риску поддельных операция ! Пожалуйста соблюдайте правила и будьте внимательны чтобы избежать блокировки. Если у вас возникли какие то проблемы пишите админстратору: ' + '@' + adminInstance.username
+        text = 'Депозит не выполнен\n⛔️ Уведомляем за использование поддельного или фальшивого чека, вы подвергаете себя риску поддельных операция ! Пожалуйста соблюдайте правила и будьте внимательны чтобы избежать блокировки. Если у вас возникли какие то проблемы пишите админстратору: ' + '@GymAdmin_01'
         await context.bot.send_message(chat_id=self.chat.id, text=text)
 
     async def _block_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        text = 'Вы были заблокированы.⛔️\nЕсли у вас остались вопросы, напишите ' + '@' + adminInstance.username
+        text = 'Вы были заблокированы.⛔️\nЕсли у вас остались вопросы, напишите ' + '@GymAdmin_01'
         await context.bot.send_message(chat_id=self.chat.id, text=text, reply_markup=ReplyKeyboardRemove())
 
     async def __default_inline(self, query):
