@@ -741,19 +741,27 @@ class DepositAccept():
             await query.edit_message_reply_markup(reply_markup=markup)
         elif user_response == 'acceptSure':
             try:
-                accepted = await self._accept(query, message)
-                
+                accepted = await self._accept(query, message) 
                 if (accepted):
-                    await self._accept_message(update, context)
-                    await query.edit_message_caption(caption=message + '\n\nПринято')
-                    await self.finish(update, context)
-                    done = True
+                    reply = [
+                        [ 
+                             InlineKeyboardButton('Оповестить о принятии заявки', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'notifyAcceptance'})),
+                        ]
+                    ]
+
+                    markup = InlineKeyboardMarkup(reply)
+                    await query.edit_message_reply_markup(reply_markup=markup)
                 else:
                     await self.__default_inline(query)
             except Exception as e:
                 print("Deposit: ", e)
                 await update.message.reply_text("Ошибка при выполнении запроса Deposit:\n{}".format(e))
 
+        elif user_response == 'notifyAcceptance':
+            await self._accept_message(update, context)
+            await query.edit_message_caption(caption=message + '\n\nПринято')
+            await self.finish(update, context)
+            done = True
         elif user_response == 'decline':
             reply = [
                 [
