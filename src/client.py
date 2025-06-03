@@ -315,13 +315,13 @@ class DepositProcess():
                 await update.message.reply_text('Выберите способ пополнения👇', reply_markup=markup)
                 return False
             case 3:
-                if user_response not in await wallets.walletNames():
+                if user_response not in await depositWallets.walletNames():
                     await invalid_reply(update, context)
                     return False
 
                 self.step += 1
                 
-                walletsStack = await wallets.getWallets()
+                walletsStack = await depositWallets.getWallets()
 
                 for i in walletsStack:
                     if i['name'] == user_response:
