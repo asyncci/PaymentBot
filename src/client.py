@@ -439,13 +439,7 @@ class DepositProcess():
                 name = escape_special_characters(self.wallet['name'], special_chars)
 
                 await update.message.reply_text(reciever_details.format(name, self.wallet['details'], money), parse_mode='MarkdownV2')
-
-
-                reply = [
-                    ['']
-                ]
-                await update.message.reply_text('ℹ️  ', reply_markup=) 
-                
+ 
 
                 reply = [
                     ['Отмена']
