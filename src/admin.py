@@ -535,7 +535,8 @@ class WithdrawAccept():
                 await query.edit_message_text(text=message + '\n\nВывод невозможен\n\n{}'.format(self.chat.id, payout['Message']))
                 return False
             else:
-                await query.edit_message_text(text=message + '\n\nПроизведен ✅\nСумма на стороне букмекера: {}'.format(self.chat.id, payout))
+                print("WITHDRAW: ", payout)
+                await query.edit_message_text(text=message + '\n\nПроизведен ✅\nСумма на стороне букмекера: {}'.format(self.chat.id, payout['Summa']))
                 return True
         except: 
             await query.edit_message_text(text=message + '\n\nВывод невозможен.\nОшибка')
@@ -723,7 +724,8 @@ class DepositAccept():
                 await query.edit_message_caption(caption=message + '\n\nПополнение невозможно\n\n{}'.format(self.chat.id,deposit['Message']))
                 return False
             else:
-                await  query.edit_message_caption(caption=message + '\n\nПроизведено ✅\nСумма на стороне букмекера: {}'.format(self.chat.id, deposit))
+                print("DEPOSIT: ", deposit)
+                await  query.edit_message_caption(caption=message + '\n\nПроизведено ✅\nСумма на стороне букмекера: {}'.format(self.chat.id, deposit['Summa']))
                 return True
                 
         except: 
