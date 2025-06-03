@@ -506,7 +506,7 @@ class WithdrawAccept():
 
         markup = InlineKeyboardMarkup(reply)
         
-        text = "ВЫВОД от пользователя: {}\n\nБукмекер: {}\nId на сайте: `{}`\nВывод по: {}\nНомер: `{}`\n*Сумма клиента: `{}`*\nКОД: `{}`".format(username, withdraw.bookmaker['name'], withdraw.bookmakerId, withdraw.wallet['name'], withdraw.details, withdraw.money, withdraw.code)
+        text = "ВЫВОД от пользователя: {}\n\nБукмекер: {}\nId на сайте: `{}`\nВывод по: {}\nНомер: `{}`\n*Сумма от клиента: `{}`*\nКОД: `{}`".format(username, withdraw.bookmaker['name'], withdraw.bookmakerId, withdraw.wallet['name'], withdraw.details, withdraw.money, withdraw.code)
         
         special_chars = r"_*[]()~>#+-=|{}.!\\"
         text = escape_special_characters(text, special_chars)
@@ -693,7 +693,7 @@ class DepositAccept():
         markup = InlineKeyboardMarkup(reply)
         
         names = " ".join(self.deposit.clientName)
-        text = "{}\n\nПОПОЛНЕНИЕ от пользователя: {}\n\nБукмекер: {}\nПополнение по: {}\nФИО: {}\nId на сайте: `{}`\n*Сумма от клиента: `{}`*".format(self.chat.id,username, deposit.bookmaker, deposit.wallet['name'], names, deposit.bookmakerId, deposit.money)
+        text = "{}\n\nПОПОЛНЕНИЕ от пользователя: {}\n\nБукмекер: {}\nПополнение по: {}\nФИО: {}\nId на сайте: `{}`\n*Cумма от клиента: `{}`*".format(self.chat.id,username, deposit.bookmaker, deposit.wallet['name'], names, deposit.bookmakerId, deposit.money)
         photo = deposit.photo
          
         special_chars = r"_*[]()~>#+-=|{}.!\\"
@@ -774,6 +774,7 @@ class DepositAccept():
             await query.edit_message_reply_markup(reply_markup=markup)
         elif user_response == 'declineSure':
             await self._decline_message(update, context)
+            await query.edit_message_caption(caption=message + '\n\nОтклонено')
             await self.finish(update, context)
             done = True
         elif user_response == 'block':
