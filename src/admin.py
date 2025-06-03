@@ -30,6 +30,12 @@ except:
     error('Admin ID not provided in .env.')
     quit()
 
+try:
+    SECOND_ADMIN_ID = int(getenv("SECOND_ADMIN_ID"))
+except:
+    error('Admin ID not provided in .env.')
+    quit()
+
 def saveRequests(requests):
     data_bytes = pickle.dumps(requests)
     with open("requests.pkl", "wb") as f:
@@ -71,7 +77,7 @@ async def callbackWithdraw(update: Update, context: ContextTypes.DEFAULT_TYPE, n
         await update.message.reply_text("У вас висит заявка, пожалуйста подождите пока она будет обработана.")
         return False
     
-    state = WithdrawAccept(newWithdraw, adminInstance.state, update, context)
+    state = WithdrawAccept(newWithdraw, adminInstance.state, SECOND_ADMIN_ID, update, context)
     adminInstance.requests[chat_id] = state
     if adminInstance.local_state == None:
         await adminInstance.runRequests(update, context)
@@ -84,7 +90,7 @@ async def callbackDeposit(update: Update, context: ContextTypes.DEFAULT_TYPE, ne
         await update.message.reply_text("У вас висит заявка, пожалуйста подождите пока она будет обработана.")
         return False
 
-    state = DepositAccept(newDeposit, adminInstance.state, update, context)
+    state = DepositAccept(newDeposit, adminInstance.state, ADMIN_ID, update, context)
     adminInstance.requests[chat_id] = state
     if adminInstance.local_state == None:
         await adminInstance.runRequests(update, context)
@@ -470,7 +476,7 @@ async def button_handler(update: Update, context: CallbackContext) -> None:
 
 
 class WithdrawAccept(): 
-    def __init__(self, newWithdraw: WithdrawProcess, previous_state: Optional[Any], update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    def __init__(self, newWithdraw: WithdrawProcess, previous_state: Optional[Any], handle_account: int, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         self.withdraw = newWithdraw
         self.previous_state = previous_state 
         username = update.message.chat.username
@@ -482,6 +488,7 @@ class WithdrawAccept():
         self.chat = update.message.chat
         self.next_request_state = None
         self.shown_to_admin = False
+        self.send_to = handle_account
 
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -499,15 +506,15 @@ class WithdrawAccept():
 
         markup = InlineKeyboardMarkup(reply)
         
-        text = "ВЫВОД от пользователя: {}\n\nБукмекер: {}\nId на сайте: `{}`\nВывод по: {}\nНомер: `{}`\nСумма клиента: `{}`\nКОД: `{}`".format(username, withdraw.bookmaker['name'], withdraw.bookmakerId, withdraw.wallet['name'], withdraw.details, withdraw.money, withdraw.code)
+        text = "ВЫВОД от пользователя: {}\n\nБукмекер: {}\nId на сайте: `{}`\nВывод по: {}\nНомер: `{}`\n*Сумма клиента: `{}`*\nКОД: `{}`".format(username, withdraw.bookmaker['name'], withdraw.bookmakerId, withdraw.wallet['name'], withdraw.details, withdraw.money, withdraw.code)
         
         special_chars = r"_*[]()~>#+-=|{}.!\\"
         text = escape_special_characters(text, special_chars)
 
-        message = await context.bot.send_message(chat_id=ADMIN_ID, reply_markup=markup, text=text, parse_mode='MarkdownV2')
+        message = await context.bot.send_message(chat_id=self.send_to, reply_markup=markup, text=text, parse_mode='MarkdownV2')
         self.message_id = message.message_id
         self.shown_to_admin = True   
-        #await context.bot.send_message(chat_id=ADMIN_ID, reply_markup=markup, text=text)
+        #await context.bot.send_message(chat_id=, reply_markup=markup, text=text)
 
     async def finish(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         del adminInstance.requests[self.chat.id]
@@ -655,7 +662,7 @@ class WithdrawAccept():
         await query.edit_message_reply_markup(reply_markup=markup)
 
 class DepositAccept(): 
-    def __init__(self, newDeposit: DepositProcess, previous_state: Optional[Any], update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    def __init__(self, newDeposit: DepositProcess, previous_state: Optional[Any], handle_account: int,update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         self.deposit = newDeposit
         self.previous_state = previous_state 
         username = update.message.chat.username
@@ -667,6 +674,7 @@ class DepositAccept():
         self.chat = update.message.chat
         self.next_request_state = None
         self.shown_to_admin = False
+        self.send_to = handle_account
 
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -685,16 +693,16 @@ class DepositAccept():
         markup = InlineKeyboardMarkup(reply)
         
         names = " ".join(self.deposit.clientName)
-        text = "{}\n\nПОПОЛНЕНИЕ от пользователя: {}\n\nБукмекер: {}\nПополнение по: {}\nФИО: {}\nId на сайте: `{}`\nСумма от клиента: `{}`".format(self.chat.id,username, deposit.bookmaker, deposit.wallet['name'], names, deposit.bookmakerId, deposit.money)
+        text = "{}\n\nПОПОЛНЕНИЕ от пользователя: {}\n\nБукмекер: {}\nПополнение по: {}\nФИО: {}\nId на сайте: `{}`\n*Сумма от клиента: `{}`*".format(self.chat.id,username, deposit.bookmaker, deposit.wallet['name'], names, deposit.bookmakerId, deposit.money)
         photo = deposit.photo
          
         special_chars = r"_*[]()~>#+-=|{}.!\\"
         text = escape_special_characters(text, special_chars)
         
-        message = await context.bot.send_photo(chat_id=ADMIN_ID, reply_markup=markup, caption=text, photo=photo[0], parse_mode='MarkdownV2')
+        message = await context.bot.send_photo(chat_id=self.send_to, reply_markup=markup, caption=text, photo=photo[0], parse_mode='MarkdownV2')
         self.message_id = message.message_id
         self.shown_to_admin = True   
-        #await context.bot.send_message(chat_id=ADMIN_ID, reply_markup=markup, text=text)
+        #await context.bot.send_message(chat_id=self.send_to, reply_markup=markup, text=text)
 
     async def finish(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         del adminInstance.requests[self.chat.id]
