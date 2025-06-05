@@ -449,6 +449,7 @@ class DepositProcess():
                      ],
                     [
                         InlineKeyboardButton(text=hosts['mbank']['name'], url=linkGenerator.generate(hosts['mbank']['host'], admin.adminInstance.payment_qr_link)), 
+                        InlineKeyboardButton(text=hosts['balance_kg']['name'], url=linkGenerator.generate(hosts['balance_kg']['host'], admin.adminInstance.payment_qr_link)) 
                      ]
                 ]
 
