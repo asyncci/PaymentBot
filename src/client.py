@@ -1,6 +1,7 @@
 from functools import update_wrapper
 from io import UnsupportedOperation
-import json
+import json, random
+from os import link
 import re
 from typing import Any, Tuple
 from typing_extensions import cast
@@ -11,6 +12,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler
 from telegram.ext import CommandHandler, ContextTypes, MessageHandler, filters
 
 import cashdesk_api
+import linkGenerator
 import admin, bookmakers, depositWallets, withdrawWallets
 import inspect
 
@@ -434,6 +436,24 @@ class DepositProcess():
                 await update.message.reply_text(warning_text)
 
                 reciever_details = 'Способ оплаты: {}\n\nРеквизиты: `{}`\nСумма: `{}`\n\nСумма и реквизит копируются при касании' 
+                hosts = linkGenerator.hosts
+                #links to banks
+                buttons = [
+                    [
+                        InlineKeyboardButton(text=hosts['o_dengi']['name'], url=linkGenerator.generate(hosts['o_dengi']['host'], admin.adminInstance.payment_qr_link)), 
+                        InlineKeyboardButton(text=hosts['kompanion']['name'], url=linkGenerator.generate(hosts['kompanion']['host'], admin.adminInstance.payment_qr_link)),
+                     ],
+                    [
+                        InlineKeyboardButton(text=hosts['bakai24']['name'], url=linkGenerator.generate(hosts['bakai24']['host'], admin.adminInstance.payment_qr_link)), 
+                        InlineKeyboardButton(text=hosts['megapay']['name'], url=linkGenerator.generate(hosts['megapay']['host'], admin.adminInstance.payment_qr_link)),
+                     ],
+                    [
+                        InlineKeyboardButton(text=hosts['mbank']['name'], url=linkGenerator.generate(hosts['mbank']['host'], admin.adminInstance.payment_qr_link)), 
+                     ]
+                ]
+
+                markup = InlineKeyboardMarkup(buttons)
+                await update.message.reply_text('Сумма: {}.{:02}✅'.format(money, random.randint(1,99)), reply_markup=markup)
 
                 special_chars = r"_*[]()~`>#+-=|{}.!\\"
                 name = escape_special_characters(self.wallet['name'], special_chars)

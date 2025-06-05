@@ -864,7 +864,14 @@ class Admin:
         except:
             technical_jobs = "false"
 
+        try:
+            payment_qr_link = adminSettings['payment_qr_link']
+        except: 
+            payment_qr_link = "#00020101021132550015qr.kompanion.kg01041005101299699581888912021113021233230119%D0%9F%D0%BE%D0%BF%D0%BE%D0%BB%D0%BD%D0%B5%D0%BD%D0%B8%D0%B5+%D0%BA%D0%BE%D1%88%D0%B5%D0%BB%D1%8C%D0%BA%D0%B05303417520460125914KOMPANION+BANK3408%D0%98%D0%9B%D0%AC%D0%81%D0%A1+%D0%AD.63042DAE"
+
+        self.payment_qr_link = payment_qr_link
         self.requests = loadRequests()
+
 
         if technical_jobs == "true":
             self.technical_jobs = True
