@@ -6,12 +6,13 @@ from io import UnsupportedOperation
 import json
 from logging import captureWarnings, error, exception
 from os import execle, getenv, replace, stat
+from ssl import ALERT_DESCRIPTION_DECOMPRESSION_FAILURE
 from typing import Any, Dict, List, Optional
 from dotenv import load_dotenv
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Message, ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram._utils.argumentparsing import parse_lpo_and_dwpp
 import cashdesk_api
-from client import DepositProcess, WithdrawProcess, admin, getAgreedUsers, loadAgreedUsers
+from client import DepositProcess, WithdrawProcess, admin, getAgreedUsers, linkGenerator, loadAgreedUsers
 from main import TECHNICIAN_ID, technical_jobs
 from bookmakers import Bookmakers
 
@@ -400,6 +401,61 @@ class Newsletter():
                 except Exception as e:
                     print("Notifications, chat not found.")
 
+class SetBank(): 
+    def __init__(self) -> None:
+        self.step = 1
+
+    async def run(self, update: Update, context: ContextTypes.DEFAULT_TYPE, user_response: str | None) -> bool:
+        reply = [
+                ['Отмена']
+            ]
+        markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
+        
+        #get response on previous question and ask actual
+        match self.step: 
+            case 1:
+                await update.message.reply_text('Напишите ссылку банка без https://..../# :', reply_markup=markup)
+        
+                self.step += 1
+                return False
+            case 2: 
+                #get response for first question
+                self.step += 1
+                self.link = user_response
+                return True
+       
+    async def finalize(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: 
+        await adminInstance.changeBankLink(self.link)
+        await update.message.reply_text('Банк был изменен!')
+
+        #save to DB
+class ChangeBank():
+    @staticmethod
+    async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        local_state = SetBank()
+        adminInstance.local_state = local_state
+        await local_state.run(update, context, None)
+
+    @staticmethod
+    async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: 
+        user_response = update.message.text 
+        if user_response == 'Отмена':
+            adminInstance.local_state = None
+            adminInstance.state = Idle
+            await adminInstance.finishedState(update, context)
+        else: 
+            local_state = adminInstance.local_state
+            if local_state == None:
+                await invalid_reply(update, context)
+                return
+
+            finish = await local_state.run(update, context, user_response) 
+            if finish:
+                await local_state.finalize(update, context)
+                adminInstance.local_state = None
+                adminInstance.state = Idle
+                await adminInstance.finishedState(update, context)
+
 class Idle():
     @staticmethod
     async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -409,6 +465,7 @@ class Idle():
             ['Букмекеры'],
             ['Заблокированные пользователи'],
             ['Изменить время рассылки'],
+            ['Изменить ссылку банка'],
             ['Вкл/Выкл Технические работы']
         ]
 
@@ -441,6 +498,9 @@ class Idle():
                 await update.message.reply_text('Технические работы были ВКЛЮЧЕНЫ.')
             else:
                 await update.message.reply_text('Технические работы были ВЫКЛЮЧЕНЫ.') 
+        elif user_response == 'Изменить ссылку банка':
+            adminInstance.state = ChangeBank
+            await ChangeBank.start(update, context)
         else:
             await invalid_reply(update, context)
 
@@ -867,7 +927,8 @@ class Admin:
         try:
             payment_qr_link = adminSettings['payment_qr_link']
         except: 
-            payment_qr_link = "#00020101021132550015qr.kompanion.kg01041005101299699581888912021113021233230119%D0%9F%D0%BE%D0%BF%D0%BE%D0%BB%D0%BD%D0%B5%D0%BD%D0%B8%D0%B5+%D0%BA%D0%BE%D1%88%D0%B5%D0%BB%D1%8C%D0%BA%D0%B05303417520460125914KOMPANION+BANK3408%D0%98%D0%9B%D0%AC%D0%81%D0%A1+%D0%AD.63042DAE"
+            payment_qr_link = "00020101021132550015qr.kompanion.kg01041005101299699581888912021113021233230119%D0%9F%D0%BE%D0%BF%D0%BE%D0%BB%D0%BD%D0%B5%D0%BD%D0%B8%D0%B5+%D0%BA%D0%BE%D1%88%D0%B5%D0%BB%D1%8C%D0%BA%D0%B05303417520460125914KOMPANION+BANK3408%D0%98%D0%9B%D0%AC%D0%81%D0%A1+%D0%AD.63042DAE"
+            adminSettings['payment_qr_link'] = payment_qr_link
 
         self.payment_qr_link = payment_qr_link
         self.requests = loadRequests()
@@ -886,6 +947,12 @@ class Admin:
         else:
             adminSettings['technical_jobs'] = "false"
        
+        await saveAdminSettings()
+
+    async def changeBankLink(self, link):
+        self.payment_qr_link = link
+        adminSettings['payment_qr_link'] = link
+
         await saveAdminSettings()
 
     async def finishedState(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -908,7 +975,6 @@ class Admin:
         await self.requests[id].button_handler(user_response, update, context)
 
 adminInstance = Admin()
-
 
 class Technician:
     messages: Dict[int, Message] = {}
