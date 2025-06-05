@@ -435,7 +435,7 @@ class DepositProcess():
                 warning_text = '⚠️ Пополнение от 3х лиц запрещено, используйте только свой кошелек\n❗️Терминал, единицы пополнение строго запрещено, вы потеряете деньги если пополните с терминала'
                 await update.message.reply_text(warning_text)
 
-                reciever_details = 'Способ оплаты: {}\n\nРеквизиты: `{}`\nСумма: `{}`\n\nСумма и реквизит копируются при касании' 
+                reciever_details = 'Способ оплаты: {}\n\nРеквизиты: `{}`\nСумма: `{}.{}`\n\nСумма и реквизит копируются при касании' 
                 hosts = linkGenerator.hosts
                 #links to banks
                 buttons = [
@@ -453,12 +453,11 @@ class DepositProcess():
                 ]
 
                 markup = InlineKeyboardMarkup(buttons)
-                await update.message.reply_text('Сумма: {}.{:02}✅'.format(money, random.randint(1,99)), reply_markup=markup)
 
                 special_chars = r"_*[]()~`>#+-=|{}.!\\"
                 name = escape_special_characters(self.wallet['name'], special_chars)
 
-                await update.message.reply_text(reciever_details.format(name, self.wallet['details'], money), parse_mode='MarkdownV2')
+                await update.message.reply_text(reciever_details.format(name, self.wallet['details'], money, random.randint(1,99)), parse_mode='MarkdownV2', reply_markup=markup)
  
 
                 reply = [
