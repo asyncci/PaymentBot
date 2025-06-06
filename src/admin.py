@@ -997,7 +997,7 @@ class Technician:
             await context.bot.send_message(chat_id=TECHNICIAN_ID, text="Ongoing requests:")
             for key, value in admin.adminInstance.requests.items(): 
                 requestName = value.__class__.__name__
-                message = await context.bot.send_message(chat_id=TECHNICIAN_ID, text="Chat id {}: {} request".format(key, requestName))
+                message = await context.bot.send_message(chat_id=TECHNICIAN_ID, text="Chat id {}: {} request, shown_to_admin={}".format(key, requestName,value.shown_to_admin))
                 admin.technicianInstance.messages[key] = message
 
         else:
@@ -1013,7 +1013,7 @@ class Technician:
             await update.message.reply_text('Ongoing requests:')
             for key, value in admin.adminInstance.requests.items(): 
                 requestName = value.__class__.__name__
-                message = await update.message.reply_text("Chat id {}: {} request".format(key, requestName))
+                message = await update.message.reply_text("Chat id {}: {} request, shown_to_admin={}".format(key, requestName,value.shown_to_admin))
                 admin.technicianInstance.messages[key] = message
 
         else:
