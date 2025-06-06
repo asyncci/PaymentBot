@@ -754,7 +754,7 @@ class DepositAccept():
         markup = InlineKeyboardMarkup(reply)
         
         names = " ".join(self.deposit.clientName)
-        text = "{}\n\nПОПОЛНЕНИЕ от пользователя: {}\n\nБукмекер: {}\nПополнение по: {}\nФИО: {}\nId на сайте: `{}`\nСУММА: `{}` сом".format(self.chat.id,username, deposit.bookmaker, deposit.wallet['name'], names, deposit.bookmakerId, deposit.money)
+        text = "{}\n\nПОПОЛНЕНИЕ от пользователя: {}\n\nБукмекер: {}\nФИО: {}\nId на сайте: `{}`\nСУММА: `{}` сом".format(self.chat.id,username, deposit.bookmaker, names, deposit.bookmakerId, deposit.money)
         photo = deposit.photo
          
         special_chars = r"_*[]()~>#+-=|{}.!\\"
