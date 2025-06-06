@@ -309,26 +309,26 @@ class DepositProcess():
                 self.step += 1
                 self.bookmaker = user_response
 
-                reply = await get_deposit_wallets()
-                reply.append(['Отмена'])
+#                reply = await get_deposit_wallets()
+                reply = [['Отмена']]
 
                 markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
 
-                await update.message.reply_text('Выберите способ пополнения👇', reply_markup=markup)
-                return False
-            case 3:
-                if user_response not in await depositWallets.walletNames():
-                    await invalid_reply(update, context)
-                    return False
-
-                self.step += 1
-                
-                walletsStack = await depositWallets.getWallets()
-
-                for i in walletsStack:
-                    if i['name'] == user_response:
-                        self.wallet = i
-
+#                 await update.message.reply_text('Выберите способ пополнения👇', reply_markup=markup)
+#                 return False
+#             case 3:
+#                 if user_response not in await depositWallets.walletNames():
+#                     await invalid_reply(update, context)
+#                     return False
+# 
+#                 self.step += 1
+#                 
+#                 walletsStack = await depositWallets.getWallets()
+# 
+#                 for i in walletsStack:
+#                     if i['name'] == user_response:
+#                         self.wallet = i
+# 
                 reply: Any
                 
                 if clientName == None:
@@ -342,11 +342,11 @@ class DepositProcess():
                     ]
 
                 markup = ReplyKeyboardMarkup(reply, resize_keyboard=True)
-                text = "⚠️ Пожалуйста введите ваше имя и фамилию в {}, чтобы идентифицировать ваше пополнение, при неверном имени пополнение будет отказано:"
-                await update.message.reply_photo(photo=open('photos/mbank.jpg','rb'), caption=text.format(self.wallet['name']), reply_markup=markup)
+                text = "⚠️ Пожалуйста введите ваше имя и фамилию, чтобы идентифицировать ваше пополнение, при неверном имени пополнение будет отказано:"
+                await update.message.reply_photo(photo=open('photos/mbank.jpg','rb'), caption=text, reply_markup=markup)
                 return False 
 
-            case 4:
+            case 3:
                 #check for correct name
                 if user_response == None:
                     await update.message.reply_text('❗️Будьте внимательны повторите ввод Имени и Фамилии отправителя:')
@@ -382,7 +382,7 @@ class DepositProcess():
                 await update.message.reply_photo(photo=open('photos/xbet.jpg','rb'), caption=text.format(self.bookmaker), reply_markup=markup) 
                 return False
 
-            case 5:
+            case 4:
                 #check for correct id
                 if (user_response == None):
                     await invalid_reply(update, context)
@@ -419,7 +419,7 @@ class DepositProcess():
                 await update.message.reply_text(text, reply_markup=markup)
 
                 return False
-            case 6:
+            case 5:
                 money = user_response
 
                 try:
@@ -454,9 +454,6 @@ class DepositProcess():
                 ]
 
                 markup = InlineKeyboardMarkup(buttons)
-
-                special_chars = r"_*[]()~`>#+-=|{}.!\\"
-                name = escape_special_characters(self.wallet['name'], special_chars)
 
                 await update.message.reply_text(reciever_details.format(money), parse_mode='MarkdownV2', reply_markup=markup)
  
