@@ -6,6 +6,7 @@ from io import UnsupportedOperation
 import json
 from logging import captureWarnings, error, exception
 from os import execle, getenv, replace, stat
+from signal import valid_signals
 from ssl import ALERT_DESCRIPTION_DECOMPRESSION_FAILURE
 from typing import Any, Dict, List, Optional
 from dotenv import load_dotenv
@@ -966,7 +967,7 @@ class Admin:
                 await value.start(update, context)
                  
                 if self.technical_jobs == True:
-                    message = await context.bot.send_message(chat_id=TECHNICIAN_ID, text="Chat id {}: {} request".format(value.chat.id, value.__class__.__name__))
+                    message = await context.bot.send_message(chat_id=TECHNICIAN_ID, text="Chat id {}: {} request, shown_to_admin={}".format(value.chat.id, value.__class__.__name__, value.shown_to_admin))
                     technicianInstance.messages[key] = message                                                            
                 
 
