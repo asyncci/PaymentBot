@@ -68,6 +68,15 @@ async def technical_jobs(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await admin.technicianInstance.afterTechnicalButton(update, context) 
         
 
+async def technical_jobs(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    userId = update.message.chat.id
+    if userId == TECHNICIAN_ID:
+
+        #for key in admin.adminInstance.requests:
+        #    admin.adminInstance.requests[key].shown_to_admin = False
+
+        await admin.adminInstance.runRequests(update, context)
+
 def handle_exit(signum, frame):
     print(f"Received signal {signum}, saving requests...")
     
@@ -83,6 +92,7 @@ def main() -> None:
 
         app.add_handler(CommandHandler('start', start));
         app.add_handler(CommandHandler('technical_jobs', technical_jobs));
+        app.add_handler(CommandHandler('run_requests', technical_jobs));
         app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, handle_reply))
         app.add_handler(CallbackQueryHandler(button_handler))
         app.run_polling(allowed_updates=Update.ALL_TYPES)
