@@ -37,14 +37,14 @@ except:
     error('Admin ID not provided in .env.')
     quit()
 
-def saveRequests(requests):
+def saveRequests(requests, name):
     data_bytes = pickle.dumps(requests)
-    with open("requests.pkl", "wb") as f:
+    with open(name, "wb") as f:
         f.write(data_bytes)
 
-def loadRequests():
+def loadRequests(name):
     try:
-        with open("requests.pkl", "rb") as f:
+        with open(name, "rb") as f:
             loaded_requests = pickle.load(f)
             return loaded_requests
     except:
@@ -931,7 +931,7 @@ class Admin:
             adminSettings['payment_qr_link'] = payment_qr_link
 
         self.payment_qr_link = payment_qr_link
-        self.requests = loadRequests()
+        self.requests = loadRequests("requests.pkl")
 
 
         if technical_jobs == "true":
@@ -981,6 +981,10 @@ class Technician:
 
     _instance = None  # Class variable to store the instance
     
+    def __init__(self):
+
+        self.messages = loadRequests("technical_messages.pkl")
+
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
             cls._instance = super().__new__(cls)

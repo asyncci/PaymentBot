@@ -71,7 +71,8 @@ async def technical_jobs(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 def handle_exit(signum, frame):
     print(f"Received signal {signum}, saving requests...")
     
-    admin.saveRequests(admin.adminInstance.requests)
+    admin.saveRequests(admin.adminInstance.requests, "requests.pkl")
+    admin.saveRequests(admin.technicianInstance.messages, "technical_messages.pkl")
 
     sys.exit(0)
 
