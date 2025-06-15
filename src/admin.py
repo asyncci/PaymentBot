@@ -571,11 +571,23 @@ class WithdrawAccept():
         
         special_chars = r"_*[]()~>#+-=|{}.!\\"
         text = escape_special_characters(text, special_chars)
+        
+        try:
+            message = await context.bot.send_message(chat_id=self.send_to, reply_markup=markup, text=text, parse_mode='MarkdownV2')
+            self.message_id = message.message_id
+        except: 
+            reply = [
+                 [
+                      InlineKeyboardButton('Отклонить', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'decline'}))
+                ],
+            ]
 
-        message = await context.bot.send_message(chat_id=self.send_to, reply_markup=markup, text=text, parse_mode='MarkdownV2')
-        self.message_id = message.message_id
+            markup = InlineKeyboardMarkup(reply)
+            message = await context.bot.send_message(chat_id=self.send_to, text="Ошибка, клиент ввел некорректные данные", reply_markup=markup)
+            self.message_id = message.message_id
+    
         self.shown_to_admin = True   
-        #await context.bot.send_message(chat_id=, reply_markup=markup, text=text)
+    #await context.bot.send_message(chat_id=, reply_markup=markup, text=text)
 
     async def finish(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         del adminInstance.requests[self.chat.id]
@@ -760,9 +772,20 @@ class DepositAccept():
          
         special_chars = r"_*[]()~>#+-=|{}.!\\"
         text = escape_special_characters(text, special_chars)
-        
-        message = await context.bot.send_photo(chat_id=self.send_to, reply_markup=markup, caption=text, photo=photo[0], parse_mode='MarkdownV2')
-        self.message_id = message.message_id
+        try:
+            message = await context.bot.send_photo(chat_id=self.send_to, reply_markup=markup, caption=text, photo=photo[0], parse_mode='MarkdownV2')
+            self.message_id = message.message_id
+        except: 
+            reply = [
+                 [
+                      InlineKeyboardButton('Отклонить', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'decline'}))
+                ],
+            ]
+
+            markup = InlineKeyboardMarkup(reply)
+            message = await context.bot.send_message(chat_id=self.send_to, text="Ошибка, клиент ввел некорректные данные", reply_markup=markup)
+            self.message_id = message.message_id
+    
         self.shown_to_admin = True   
         #await context.bot.send_message(chat_id=self.send_to, reply_markup=markup, text=text)
 
