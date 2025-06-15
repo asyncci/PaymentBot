@@ -578,7 +578,7 @@ class WithdrawAccept():
         except: 
             reply = [
                  [
-                      InlineKeyboardButton('Отклонить', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'decline'}))
+                      InlineKeyboardButton('Отклонить', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'declineIncorrect'}))
                 ],
             ]
 
@@ -672,6 +672,11 @@ class WithdrawAccept():
             await query.edit_message_text(text=message + "\n\nОтклонено❌")
             await self.finish(update, context)
             done = True
+        elif user_response == 'declineIncorrect':
+            await self._decline_incorrect_message(update, context)
+            await query.edit_message_text(text=message + "\n\nОтклонено❌")
+            await self.finish(update, context)
+            done = True
         elif user_response == 'block':
             reply = [
                 [ 
@@ -717,6 +722,10 @@ class WithdrawAccept():
         text = '⚠️ Вывод не выполнен\n⛔️ Вы ввели не верные данные для вывода\n🛟 Если у вас возникли какие то вопросы или проблемы пишите админстратору: ' + '@GymAdmin_01'
         await context.bot.send_message(chat_id=self.chat.id, text=text)
 
+    async def _decline_incorrect_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        text = 'Вы ввели некорректные данные, введите данные без символов!\n\nДепозит не выполнен\n⛔️ Уведомляем за использование поддельного или фальшивого чека, вы подвергаете себя риску поддельных операция ! Пожалуйста соблюдайте правила и будьте внимательны чтобы избежать блокировки. Если у вас возникли какие то проблемы пишите админстратору: ' + '@GymAdmin_01'
+        await context.bot.send_message(chat_id=self.chat.id, text=text)
+    
     async def _block_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         text = 'Вы были заблокированы.⛔️\nЕсли у вас остались вопросы, напишите ' + '@GymAdmin_01'
         await context.bot.send_message(chat_id=self.chat.id, text=text, reply_markup=ReplyKeyboardRemove())
@@ -778,7 +787,7 @@ class DepositAccept():
         except: 
             reply = [
                  [
-                      InlineKeyboardButton('Отклонить', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'decline'}))
+                      InlineKeyboardButton('Отклонить', callback_data=json.dumps({'id': str(self.chat.id), 'option': 'declineIncorrect'}))
                 ],
             ]
 
@@ -863,6 +872,11 @@ class DepositAccept():
             await query.edit_message_caption(caption=message + '\n\nОтклонено❌')
             await self.finish(update, context)
             done = True
+        elif user_response == 'declineIncorrect':
+            await self._decline_incorrect_message(update, context)
+            await query.edit_message_text(text=message + "\n\nОтклонено❌")
+            await self.finish(update, context)
+            done = True
         elif user_response == 'block':
             reply = [
                 [ 
@@ -904,6 +918,10 @@ class DepositAccept():
         text = 'Депозит не выполнен\n⛔️ Уведомляем за использование поддельного или фальшивого чека, вы подвергаете себя риску поддельных операция ! Пожалуйста соблюдайте правила и будьте внимательны чтобы избежать блокировки. Если у вас возникли какие то проблемы пишите админстратору: ' + '@GymAdmin_01'
         await context.bot.send_message(chat_id=self.chat.id, text=text)
 
+    async def _decline_incorrect_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        text = 'Вы ввели некорректные данные, введите данные без символов!\n\nДепозит не выполнен\n⛔️ Уведомляем за использование поддельного или фальшивого чека, вы подвергаете себя риску поддельных операция ! Пожалуйста соблюдайте правила и будьте внимательны чтобы избежать блокировки. Если у вас возникли какие то проблемы пишите админстратору: ' + '@GymAdmin_01'
+        await context.bot.send_message(chat_id=self.chat.id, text=text)
+    
     async def _block_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         text = 'Вы были заблокированы.⛔️\nЕсли у вас остались вопросы, напишите ' + '@GymAdmin_01'
         await context.bot.send_message(chat_id=self.chat.id, text=text, reply_markup=ReplyKeyboardRemove())
