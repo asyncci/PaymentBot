@@ -241,7 +241,7 @@ class WithdrawProcess():
             })
             await saveAgreedUsersDB()
 
-            await update.message.reply_text('⏳ Заявка на вывод успешно создана, время выплаты от 1 минуты до 3 часов, пожалуйста дождитесь\n\nID аккаунта: {}\nНаписать администратору: '.format(self.bookmakerId) + '@GymAdmin_01')
+            await update.message.reply_text('⏳ Заявка на вывод успешно создана, время выплаты от 1 минуты до 3 часов, пожалуйста дождитесь\n\nID аккаунта: {}\nНаписать администратору: '.format(self.bookmakerId) + admin.adminInstance.username)
         else:   
             await update.message.reply_text('Вы уже отправили заявку. Пожалуйста, подождите пока она будет обработана.')
 
@@ -488,7 +488,7 @@ class DepositProcess():
             }) 
             await saveAgreedUsersDB()
 
-            await update.message.reply_text('⏳ Идет проверка...\n\nЕсли проверка занимает больше 10 минут пожалуйста напишите: ' + '@GymAdmin_01')
+            await update.message.reply_text('⏳ Идет проверка...\n\nЕсли проверка занимает больше 10 минут пожалуйста напишите: ' + admin.adminInstance.username)
         else:
             await update.message.reply_text('Вы уже отправили заявку. Пожалуйста подождите пока она будет обработана')
 

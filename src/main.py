@@ -39,7 +39,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     else:
         logging.info(f"User requested 'start' command: {update.message.chat}")
         if user in await admin.blockedUserIDs():
-            text = 'Вы были заблокированы.⛔️\nЕсли у вас остались вопросы, напишите @GymAdmin_01'
+            text = 'Вы были заблокированы.⛔️\nЕсли у вас остались вопросы, напишите' + admin.adminInstance.username
             await update.message.reply_text(text)
             return 
 
@@ -51,7 +51,7 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await admin.handle_reply(update, context)
     else:
         if user in await admin.blockedUserIDs():
-            text = 'Вы были заблокированы.⛔️\nЕсли у вас остались вопросы, напишите @GymAdmin_01'
+            text = 'Вы были заблокированы.⛔️\nЕсли у вас остались вопросы, напишите' + admin.adminInstance.username
             await update.message.reply_text(text)
             return 
         
